@@ -1,0 +1,175 @@
+.welcome-container {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: url('../components/front.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.welcome-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 0;
+}
+
+.welcome-content {
+  text-align: center;
+  color: white;
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.welcome-title {
+  font-size: 48px;
+  font-weight: 800;
+  margin-bottom: 16px;
+  margin-top: 100px;
+  color: #000000;
+  text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.9);
+  animation: fadeInDown 0.8s ease-out;
+}
+
+.welcome-subtitle {
+  font-size: 24px;
+  margin-bottom: 60px;
+  color: rgba(255, 255, 255, 0.9);
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.role-buttons {
+  display: flex;
+  gap: 150px;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 900px;
+  animation: fadeIn 1s ease-out;
+}
+
+.role-button {
+  background: white;
+  border: none;
+  border-radius: 20px;
+  padding: 30px 40px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  max-width: 280px;
+  flex: 1;
+}
+
+.role-button:hover {
+  transform: translateY(-10px) scale(1.05);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.7) 0%, rgba(185, 28, 28, 0.7) 100%);
+}
+
+.worker-button:hover,
+.admin-button:hover {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.7) 0%, rgba(185, 28, 28, 0.7) 100%);
+}
+
+.role-button:active {
+  transform: translateY(-5px) scale(1.02);
+}
+
+.button-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.role-button h2 {
+  font-size: 24px;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.role-button p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.worker-button {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+  backdrop-filter: blur(5px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.worker-button h2,
+.worker-button p {
+  color: white;
+}
+
+.admin-button {
+  background: linear-gradient(135deg, rgba(240, 147, 251, 0.4) 0%, rgba(245, 87, 108, 0.4) 100%);
+  backdrop-filter: blur(5px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.admin-button h2,
+.admin-button p {
+  color: white;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .role-buttons {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .welcome-title {
+    font-size: 32px;
+  }
+
+  .welcome-subtitle {
+    font-size: 18px;
+  }
+}
+
