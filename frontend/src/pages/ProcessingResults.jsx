@@ -9,35 +9,29 @@ function ProcessingResults() {
   if (!result) {
     return (
       <div className="results-container">
-        <div className="results-card">
-          <h2>No Results Found</h2>
-          <p>Please process images first.</p>
-          <button className="login-button" onClick={() => navigate('/worker-dashboard')}>
-            Go to Dashboard
-          </button>
+        <div className="results-header">
+          <h1>No Results</h1>
+          <button className="back-button" onClick={() => navigate('/worker-dashboard')}>Back</button>
+        </div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+          No data available.
         </div>
       </div>
     );
   }
 
+  const overallStatusText = result.status === 'notgood' ? 'NG' : 'OK';
+  const overallStatusClass = result.status === 'notgood' ? 'st-ng' : 'st-ok';
+
   return (
     <div className="results-container">
       <div className="results-header">
         <h1>Processing Results</h1>
-        <button className="back-button" onClick={() => navigate('/worker-dashboard')}>
-          ← Back to Dashboard
-        </button>
-      </div>
-
-      <div className="results-summary">
-        <div className={`status-badge status-${result.status}`}>
-          <span className="status-icon">
-            {result.status === 'notgood' ? '❌' : '✅'}
+        <div className="results-actions-header">
+          <span style={{ color: '#cbd5e1', fontSize: '13px', marginRight: '8px' }}>
+            Batch Status: <strong className={`summary-status ${overallStatusClass}`}>{overallStatusText}</strong>
           </span>
-          <div>
-            <h2>Overall Status: {result.status === 'notgood' ? 'NG (Not Good)' : 'OK (Good)'}</h2>
-            <p>Model: {result.model}</p>
-          </div>
+          <button className="back-button" onClick={() => navigate('/worker-dashboard')}>Process Next Batch</button>
         </div>
       </div>
 
@@ -47,62 +41,41 @@ function ProcessingResults() {
             ? JSON.parse(imageData.predictions)
             : imageData.predictions;
 
-          const hasDefects = imageData.defect === 'notgood' ||
-            predictions?.boxes?.length > 0 ||
-            (predictions?.masks && predictions.masks.length > 0);
+          const hasDefects = imageData.defect === 'notgood'; // Simplified for display
 
           return (
             <div key={index} className="result-card">
-              <div className="result-card-header">
-                <h3>Image {index + 1}</h3>
-                <div className={`result-status ${hasDefects ? 'status-ng' : 'status-good'}`}>
-                  {hasDefects ? 'NG' : 'Good'}
-                </div>
-              </div>
-
+              {/* Image */}
               <div className="result-image-container">
                 {imageData.visualized ? (
                   <img
                     src={`data:image/png;base64,${imageData.visualized}`}
-                    alt={`Processed ${imageData.filename || `Image ${index + 1}`}`}
+                    alt={`Result ${index + 1}`}
                     className="result-image"
                   />
                 ) : (
-                  <div className="no-image">No visualization available</div>
+                  <div className="no-image">No Image</div>
                 )}
               </div>
 
-              <div className="result-details">
-                <p><strong>Filename:</strong> {imageData.filename || `Image ${index + 1}`}</p>
-                {predictions && (
-                  <div className="predictions-info">
-                    <p><strong>Detections:</strong> {predictions.boxes?.length || 0}</p>
-                    {predictions.boxes && predictions.boxes.length > 0 && (
-                      <div className="detections-list">
-                        {predictions.boxes.map((box, boxIdx) => (
-                          <div key={boxIdx} className="detection-item">
-                            <span>Box {boxIdx + 1}</span>
-                            {box.conf && <span>Confidence: {(box.conf * 100).toFixed(1)}%</span>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+              {/* Overlay Top: Filename & Status */}
+              <div className="result-overlay">
+                <div className="result-filename">{imageData.filename || `Image ${index + 1}`}</div>
+                <div className={`result-badge ${hasDefects ? 'st-ng' : 'st-good'}`}>
+                  {hasDefects ? 'NG' : 'GOOD'}
+                </div>
+              </div>
+
+              {/* Overlay Bottom: Detections (optional, keeping minimal) */}
+              <div className="predictions-overlay">
+                Detections: {predictions?.boxes?.length || 0}
               </div>
             </div>
           );
         })}
-      </div>
-
-      <div className="results-actions">
-        <button className="login-button" onClick={() => navigate('/worker-dashboard')}>
-          Process More Images
-        </button>
       </div>
     </div>
   );
 }
 
 export default ProcessingResults;
-

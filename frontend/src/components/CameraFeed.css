@@ -1,55 +1,25 @@
 .camera-feed {
-  background: var(--background);
-  border-radius: 12px;
+  background: black;
+  /* Dark background for video */
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
-  transition: all 0.3s;
-  border: 2px solid transparent;
+  position: relative;
+  /* Context for overlay */
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border-color);
 }
 
 .camera-feed:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
-.camera-header {
-  background: var(--surface);
-  padding: 12px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 2px solid var(--border-color);
-}
-
-.camera-header h3 {
-  font-size: 16px;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.camera-status {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.camera-status.status-good {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success-color);
-}
-
-.camera-status.status-ng {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--error-color);
-}
+/* Remove old header/footer styles implicitly by not including them or clearing them out */
 
 .camera-viewport {
-  position: relative;
   width: 100%;
-  height: 300px;
+  height: 100%;
   background: #000;
   display: flex;
   align-items: center;
@@ -60,22 +30,72 @@
 .camera-video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  /* changed to contain to see full FOV, or cover if they want to fill space? User said "make it bigger", usually implies filling space. Let's stick to contain to avoid cutting off image data which might be important for processing.*/
+  /* Wait, usually for dashboard monitoring cover is better aesthetically, but for "processing" accurate frame is needed.
+     However, the processing sends the raw image (or capture). The display is just a feed.
+     Let's use 'contain' to ensure user sees what they are capturing, but black bars might appear.
+     
+     Actually, let's use object-fit: cover for the "feed" look if aspect ratios match, 
+     but 'contain' is safer for correctness. I'll stick to 'contain' for now as previously used.
+  */
+  object-fit: contain;
 }
 
+/* New Overlay Style */
+.camera-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 8px 12px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+  /* Let clicks pass through if needed */
+  z-index: 10;
+}
+
+.camera-name {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.camera-status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.camera-status-badge.status-good {
+  background: rgba(16, 185, 129, 0.9);
+  /* Green */
+  color: white;
+}
+
+.camera-status-badge.status-ng {
+  background: rgba(239, 68, 68, 0.9);
+  /* Red */
+  color: white;
+}
+
+/* Loading/Error states */
 .loading-spinner {
   color: white;
   font-size: 14px;
   animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .camera-placeholder {
@@ -84,7 +104,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  background: #1e293b;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .placeholder-content {
@@ -92,84 +115,24 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-.placeholder-content svg {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 12px;
-  opacity: 0.5;
-}
-
 .placeholder-content p {
-  font-size: 16px;
-  margin-bottom: 8px;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  margin-bottom: 4px;
 }
 
 .camera-id {
-  font-size: 12px;
+  font-size: 11px;
   opacity: 0.5;
 }
 
-.camera-footer {
-  background: var(--surface);
-  padding: 12px 16px;
-  display: flex;
-  justify-content: center;
-  border-top: 2px solid var(--border-color);
-}
+@keyframes pulse {
 
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: 600;
-}
-
-.status-indicator.status-good {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success-color);
-}
-
-.status-indicator.status-ng {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--error-color);
-}
-
-.status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.status-indicator.status-good .status-dot {
-  background: var(--success-color);
-  box-shadow: 0 0 8px var(--success-color);
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-.status-indicator.status-ng .status-dot {
-  background: var(--error-color);
-  box-shadow: 0 0 8px var(--error-color);
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
-    transform: scale(1);
   }
+
   50% {
-    opacity: 0.7;
-    transform: scale(1.1);
+    opacity: 0.5;
   }
 }
-
-.status-label {
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
