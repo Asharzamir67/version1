@@ -4,12 +4,18 @@ from typing import List
 from utils.dependencies import get_current_user
 from services.inference import run_batch_inference, run_threaded_inference
 from services.defect_detector import detect_defects
+from sqlalchemy.orm import Session
+from database import SessionLocal
+from utils.dependencies import get_db
+from models.inference_result import InferenceResult
 import asyncio
 import cv2
 import json
 import io
+import os
 import zipfile
 import time
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 router = APIRouter(prefix="/images", tags=["Images"])
@@ -20,6 +26,7 @@ async def process_images(
     images: List[UploadFile] = File(..., description="Upload 4 images"),
     model: str = Form(...),
     metadata: str = Form(...),
+    db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
     if len(images) != 4:
@@ -98,6 +105,33 @@ async def process_images(
             "metadata": metadata,
             "summary": summary_output
         }, indent=2))
+
+    # --- Save images and record result to DB ---
+    save_dir = "saved_images"
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder_name = f"{timestamp}_{model}"
+    full_save_path = os.path.join(save_dir, folder_name)
+    os.makedirs(full_save_path)
+
+    for filename, jpeg_bytes in rendered_images:
+        img_path = os.path.join(full_save_path, filename)
+        with open(img_path, "wb") as f:
+            f.write(jpeg_bytes)
+
+    # Record in Database
+    new_result = InferenceResult(
+        car_model=model,
+        image1_status=defect_statuses[0],
+        image2_status=defect_statuses[1],
+        image3_status=defect_statuses[2],
+        image4_status=defect_statuses[3]
+    )
+    db.add(new_result)
+    db.commit()
+    db.refresh(new_result)
 
     zip_time = time.time() - start_zip
     total_time = time.time() - start_read

@@ -76,6 +76,9 @@ export const authAPI = {
   getUsers: () => api.get('/admin/users'),
   updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  getModelStatus: (prompt) => api.get('/admin/model-status', { params: prompt ? { prompt } : {} }),
+  getDailyStats: () => api.get('/admin/daily-stats'),
+  openImagesFolder: () => api.post('/admin/open-images-folder'),
 };
 
 export const imageAPI = {

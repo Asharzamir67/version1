@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Import all your routers
 from routes import user_routes, admin_routes, image_routes
 from database import Base, engine
+from models.inference_result import InferenceResult
 
 # -------------------- Create Tables --------------------
 # This will create all tables in your RDS/Postgres database if they don't exist

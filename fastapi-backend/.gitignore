@@ -12,3 +12,4 @@ venv/
 /.vscode
 image_check.http
 /temp_results
+test_agent.py

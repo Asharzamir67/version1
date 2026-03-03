@@ -3,7 +3,8 @@ from ultralytics import YOLO
 from services.image_utils import bytes_to_image
 from pathlib import Path
 
-model_path = Path(__file__).resolve().parent.parent / "ai_model" / "yoloseg_bestwithoutNG.pt"
+ACTIVE_MODEL_NAME = "yoloseg_bestwithoutNG.pt"
+model_path = Path(__file__).resolve().parent.parent / "ai_model" / ACTIVE_MODEL_NAME
 
 # Create a pool of models to be reused across threads
 import queue
