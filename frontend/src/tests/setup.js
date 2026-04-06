@@ -89,3 +89,10 @@ vi.mock('jszip', () => {
 
 // Mock scrollIntoView
 window.HTMLElement.prototype.scrollIntoView = vi.fn()
+
+// Mock Animation Frame APIs (needed for recharts and sync stability)
+global.requestAnimationFrame = vi.fn((cb) => {
+  cb()
+  return 1
+})
+global.cancelAnimationFrame = vi.fn()

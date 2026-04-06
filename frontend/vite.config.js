@@ -6,11 +6,11 @@ export default defineConfig({
   plugins: [react()],
   base: './',
   define: {
-    'process.env': process.env,
+    'process.env': {},
     'process.platform': JSON.stringify(process.platform),
-    'global': 'window'  // Add this line
+    'global': 'globalThis'
   },
-  logLevel: 'warn', // Reduce console noise - only show warnings and errors
+  logLevel: 'info', // Increased for better debugging of dev-server crashes
   esbuild: {
     logOverride: { 'this-is-undefined-in-esm': 'silent' }, // Suppress common esbuild warnings
   },

@@ -130,7 +130,6 @@ function WorkerDashboard({ user, onLogout }) {
         if (stream) {
           stream.getTracks().forEach(track => {
             track.stop();
-            console.log('Stopping track:', track.label);
           });
         }
       });

@@ -79,9 +79,7 @@ describe('App Integration', () => {
       </MemoryRouter>
     )
 
-    await waitFor(() => {
-      expect(screen.getByTestId('welcome-page')).toBeInTheDocument()
-      expect(localStorage.getItem('user')).toBeNull()
-    })
+    expect(await screen.findByTestId('welcome-page')).toBeInTheDocument()
+    expect(localStorage.getItem('user')).toBeNull()
   })
 })
