@@ -6,7 +6,10 @@ from langgraph.graph import StateGraph, END, add_messages
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from models.inference_result import InferenceResult
-from services.inference import ACTIVE_MODEL_NAME
+from models.model_registry import ModelVersion
+from services.inference import get_active_model_info_from_db
+from services.evaluator_service import evaluate_model_performance
+from services.training_service import start_retraining_background, get_training_status
 import os
 import json
 from datetime import datetime, date
@@ -38,8 +41,17 @@ def get_current_model_status(db: Session, prompt: str = "Summarize the current s
 
     @tool
     def get_active_model_info():
-        """Get the name of the AI model currently being used for inference."""
-        return f"The currently active AI model is: {ACTIVE_MODEL_NAME}"
+        """Get information about the AI model currently 'Active' in production."""
+        try:
+            active = db.query(ModelVersion).filter(ModelVersion.is_active == True).first()
+            if active:
+                return (f"Active Model: Version {active.version_number} ({active.car_model_name})\n"
+                        f"- mAP@50-95: {active.map_50_95:.4f}\n"
+                        f"- Path: {active.model_path}\n"
+                        f"- Created: {active.created_at.strftime('%Y-%m-%d %H:%M')}")
+            return "No model is currently marked as 'Active' in the registry."
+        except Exception as e:
+            return f"Error fetching active model info: {str(e)}"
 
     @tool
     def get_car_model_stats(model_name: str, only_today: bool = False):
@@ -90,7 +102,98 @@ def get_current_model_status(db: Session, prompt: str = "Summarize the current s
         except Exception as e:
             return f"Error calculating quality stats: {str(e)}"
 
-    tools = [get_system_stats, get_active_model_info, get_car_model_stats, get_quality_analytics]
+    @tool
+    def get_retraining_dataset_stats():
+        """Get the current state of the model retraining dataset (train vs test counts organized by car model)."""
+        try:
+            # DB Stats
+            test_count = db.query(func.count(InferenceResult.id)).filter(InferenceResult.is_test_set == True).scalar()
+            train_count = db.query(func.count(InferenceResult.id)).filter(InferenceResult.is_test_set == False).scalar()
+            
+            # Filesystem Stats
+            dataset_dir = "dataset"
+            fs_summary = {}
+            if os.path.exists(dataset_dir):
+                for model in os.listdir(dataset_dir):
+                    model_path = os.path.join(dataset_dir, model)
+                    if os.path.isdir(model_path):
+                        fs_summary[model] = {"train": 0, "test": 0}
+                        for split in ["train", "test"]:
+                            split_path = os.path.join(model_path, split, "images")
+                            if os.path.exists(split_path):
+                                fs_summary[model][split] = len([f for f in os.listdir(split_path) if f.endswith('.jpg')])
+            
+            fs_str = "\n".join([f"  - {m}: {s['train']} train, {s['test']} test images" for m, s in fs_summary.items()])
+            return (f"Retraining Dataset Summary:\n"
+                    f"Database: {train_count} samples for training, {test_count} samples for testing.\n"
+                    f"Filesystem Storage:\n{fs_str if fs_str else '  (No model folders found in /dataset/ yet)'}")
+        except Exception as e:
+            return f"Error fetching dataset stats: {str(e)}"
+
+    @tool
+    def evaluate_model_on_dataset(car_model_query: str):
+        """
+        Evaluate the AI model's performance on the test sets of specific car models.
+        Supports single model names (e.g., 'Corolla'), comma-separated lists (e.g., 'Corolla, Civic'),
+        or the keyword 'all' to evaluate on the entire retraining dataset.
+        Returns a detailed Performance Report and a recommendation.
+        Args:
+            car_model_query: The name(s) of the car model(s) or 'all'.
+        """
+        try:
+            result = evaluate_model_performance(car_model_query)
+            if not result.get("success"):
+                return f"Evaluation Failed: {result.get('message', 'Unknown Error')}"
+            
+            return result.get("report", "No report generated.")
+        except Exception as e:
+            return f"Error during evaluation: {str(e)}"
+
+    @tool
+    def get_model_registry_history():
+        """List all trained model versions, their performance metrics, and deployment status."""
+        try:
+            versions = db.query(ModelVersion).order_by(ModelVersion.version_number.desc()).all()
+            if not versions:
+                return "Model registry is empty."
+            
+            lines = ["Model Registry History:"]
+            for v in versions:
+                status = "[ACTIVE]" if v.is_active else "[Historical]"
+                lines.append(f"{status} v{v.version_number} | {v.car_model_name} | mAP: {v.map_50_95:.4f} | Precision: {v.precision:.4f} | {v.created_at.strftime('%Y-%m-%d')}")
+            
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Error fetching registry history: {str(e)}"
+
+    @tool
+    def start_model_retraining(car_model_query: str):
+        """
+        Initiate a background training task to create a new model version.
+        Args:
+            car_model_query: Car model to train on (e.g., 'Corolla' or 'all').
+        """
+        try:
+            # Check training status first
+            current = get_training_status()
+            if "Training" in current:
+                return f"Cannot start retraining. System status: {current}"
+                
+            success, msg = start_retraining_background(car_model_query)
+            return msg
+        except Exception as e:
+            return f"Error triggering retraining: {str(e)}"
+
+    tools = [
+        get_system_stats, 
+        get_active_model_info, 
+        get_car_model_stats, 
+        get_quality_analytics, 
+        get_retraining_dataset_stats, 
+        evaluate_model_on_dataset,
+        get_model_registry_history,
+        start_model_retraining
+    ]
     tools_dict = {t.name: t for t in tools}
     
     llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.1).bind_tools(tools)
@@ -136,8 +239,19 @@ def get_current_model_status(db: Session, prompt: str = "Summarize the current s
     
     app = workflow.compile()
     
-    # Run Agent
-    initial_state = {"messages": [HumanMessage(content=prompt)]}
+    # Run Agent with system context
+    from langchain_core.messages import SystemMessage
+    system_msg = SystemMessage(content=(
+        "You are the Sealant Detection System's AI Administrator. "
+        "Your goal is to provide CONCISE and RELEVANT answers to the user's questions. "
+        "FOLLOW THESE RULES:\n"
+        "1. ONLY call the tools necessary to answer the specific question asked.\n"
+        "2. Do NOT provide a general system summary unless explicitly requested.\n"
+        "3. If the user asks about retraining or evaluation, prioritize 'evaluate_model_on_dataset' and 'get_retraining_dataset_stats'.\n"
+        "4. If there is not enough data for a tool to work, simply state that and explain what is missing, without dumping unrelated statistics.\n"
+        "5. Use 'mAP' (mean Average Precision) to suggest retraining when scores are below 0.75."
+    ))
+    initial_state = {"messages": [system_msg, HumanMessage(content=prompt)]}
     try:
         final_output = app.invoke(initial_state)
         last_msg = final_output["messages"][-1]
@@ -147,6 +261,7 @@ def get_current_model_status(db: Session, prompt: str = "Summarize the current s
         message = f"Agent Error: {str(e)}"
     
     # Extract stats for UI cards (static refresh)
+    active_path, active_name = get_active_model_info_from_db()
     try:
         db_count = db.query(func.count(InferenceResult.id)).scalar()
         save_dir = "saved_images"
@@ -159,7 +274,7 @@ def get_current_model_status(db: Session, prompt: str = "Summarize the current s
 
     return {
         "message": message,
-        "model_name": ACTIVE_MODEL_NAME,
+        "model_name": active_name or "Unknown",
         "db_count": db_count,
         "image_count": image_count
     }

@@ -4,6 +4,7 @@ from typing import List
 from utils.dependencies import get_current_user
 from services.inference import run_batch_inference, run_threaded_inference
 from services.defect_detector import detect_defects
+from services.dataset_service import save_to_dataset
 from sqlalchemy.orm import Session
 from database import SessionLocal
 from utils.dependencies import get_db
@@ -121,13 +122,33 @@ async def process_images(
         with open(img_path, "wb") as f:
             f.write(jpeg_bytes)
 
+    # --- Save Structured Dataset for Retraining (New Logic) ---
+    dataset_records = []
+    is_test_set_final = False
+    
+    for idx, (filename, _) in enumerate(rendered_images):
+        # We use ORIGINAL file_bytes for retraining, NOT the Plot-rendered bytes
+        res = save_to_dataset(
+            image_bytes=file_bytes[idx],
+            result=results[idx],
+            car_model=model,
+            filename=images[idx].filename
+        )
+        dataset_records.append(res)
+        # If any of the 4 images in the batch is marked as test, track the batch as test?
+        # Alternatively, since they share a single DB entry, we'll mark is_test_set if the first one is.
+        if idx == 0:
+            is_test_set_final = res["is_test"]
+
     # Record in Database
     new_result = InferenceResult(
         car_model=model,
         image1_status=defect_statuses[0],
         image2_status=defect_statuses[1],
         image3_status=defect_statuses[2],
-        image4_status=defect_statuses[3]
+        image4_status=defect_statuses[3],
+        is_test_set=is_test_set_final,
+        dataset_paths=json.dumps(dataset_records)
     )
     db.add(new_result)
     db.commit()

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.sql import func
 from database import Base
 
@@ -12,3 +12,7 @@ class InferenceResult(Base):
     image2_status = Column(String)  # "ok" or "ng"
     image3_status = Column(String)  # "ok" or "ng"
     image4_status = Column(String)  # "ok" or "ng"
+    
+    # Retraining metadata
+    is_test_set = Column(Boolean, default=False)
+    dataset_paths = Column(String)  # JSON-stringified list of paths to image/label pairs
