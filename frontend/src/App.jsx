@@ -12,15 +12,26 @@ import Register from './pages/Register';
 import WorkerDashboard from './pages/WorkerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ProcessingResults from './pages/ProcessingResults';
+import { isTokenExpired } from './utils/auth';
 import './App.css';
 
-function AppContent() {
+
+export function AppContent() {
   const [user, setUser] = useState(() => {
     try {
-      const raw = localStorage.getItem('user')
-      return raw ? JSON.parse(raw) : null
+      const raw = localStorage.getItem('user');
+      if (!raw) return null;
+      
+      const userData = JSON.parse(raw);
+      // Validate token expiration on initialization
+      if (isTokenExpired(userData.raw?.access_token)) {
+        console.warn('Session expired - clearing local storage');
+        localStorage.removeItem('user');
+        return null;
+      }
+      return userData;
     } catch {
-      return null
+      return null;
     }
   });
 

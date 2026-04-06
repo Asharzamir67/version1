@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { authAPI } from '../services/api'
 import './AdminDashboard.css'
 import logo from '../components/logo.png'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from '../components/Charts'
 
 const AdminDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate()

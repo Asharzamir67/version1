@@ -59,6 +59,8 @@ function WorkerDashboard({ user, onLogout }) {
   const backend1Ref = useRef(null)
   const backend2Ref = useRef(null)
   const metadataInputRef = useRef(null)
+  const streamsRef = useRef({})
+
 
   // Helper functions for Electron / Web compatibility
   const getMedia = async (constraints) => {
@@ -117,14 +119,22 @@ function WorkerDashboard({ user, onLogout }) {
       }
 
       setCameraStreams(streams)
+      streamsRef.current = streams
     }
 
     initCameras()
-
+    
     return () => {
-      Object.values(cameraStreams).forEach(stream => {
-        if (stream) stream.getTracks().forEach(track => track.stop())
-      })
+      // Use ref to ensure current active streams are stopped
+      Object.values(streamsRef.current).forEach(stream => {
+        if (stream) {
+          stream.getTracks().forEach(track => {
+            track.stop();
+            console.log('Stopping track:', track.label);
+          });
+        }
+      });
+      streamsRef.current = {};
     }
   }, [])
 

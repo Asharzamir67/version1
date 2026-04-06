@@ -56,7 +56,14 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Unauthorized - clear user data and redirect to login
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      
+      // If we are using hash router, we need to prefix with #
+      const isHashRouter = window.location.hash || window.location.protocol === 'file:';
+      const loginPath = isHashRouter ? '#/login' : '/login';
+      
+      if (!window.location.href.includes('/login')) {
+        window.location.href = loginPath;
+      }
     }
     return Promise.reject(error);
   }
