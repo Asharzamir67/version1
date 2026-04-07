@@ -5,6 +5,7 @@ from controllers.admin_controller import register_admin, login_admin
 from utils.dependencies import get_db, get_current_admin
 from agents.model_agent import get_current_model_status
 from models.inference_result import InferenceResult
+from models.model_registry import ModelVersion
 from sqlalchemy import func, and_, cast, Date
 import os
 import subprocess
@@ -100,6 +101,69 @@ def get_daily_stats(db: Session = Depends(get_db), current_admin=Depends(get_cur
         # Convert map back to an ordered list for the chart
         return [{"date": d, "ok": s["ok"], "ng": s["ng"]} for d, s in sorted(stats_map.items())]
         
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/dataset-stats")
+def get_dataset_stats(db: Session = Depends(get_db), current_admin=Depends(get_current_admin)):
+    """Fetch counts of training and testing images for each car model."""
+    try:
+        # 1. Start with car models found in the database
+        car_models = db.query(InferenceResult.car_model).distinct().all()
+        models = [m[0] for m in car_models if m[0]]
+        
+        # 2. Check filesystem for all available models in the dataset folder
+        dataset_dir = "dataset"
+        if os.path.exists(dataset_dir):
+            for model_folder in os.listdir(dataset_dir):
+                if os.path.isdir(os.path.join(dataset_dir, model_folder)) and model_folder not in models:
+                    models.append(model_folder)
+        
+        results = []
+        for model in models:
+            # Query DB for counts
+            train_db = db.query(func.count(InferenceResult.id)).filter(
+                and_(InferenceResult.car_model == model, InferenceResult.is_test_set == False)
+            ).scalar()
+            test_db = db.query(func.count(InferenceResult.id)).filter(
+                and_(InferenceResult.car_model == model, InferenceResult.is_test_set == True)
+            ).scalar()
+            
+            # Query Filesystem for physical image counts
+            train_fs = 0
+            test_fs = 0
+            model_path = os.path.join(dataset_dir, model)
+            if os.path.exists(model_path):
+                for split, count_ref in [("train", "train_fs"), ("test", "test_fs")]:
+                    split_path = os.path.join(model_path, split, "images")
+                    if os.path.exists(split_path):
+                        count = len([f for f in os.listdir(split_path) if f.endswith(('.jpg', '.jpeg', '.png'))])
+                        if split == "train": train_fs = count
+                        else: test_fs = count
+            
+            results.append({
+                "model": model,
+                "train": train_fs or train_db or 0,
+                "test": test_fs or test_db or 0
+            })
+            
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/model-registry")
+def get_model_registry(db: Session = Depends(get_db), current_admin=Depends(get_current_admin)):
+    """Fetch all model versions recorded in the system."""
+    try:
+        versions = db.query(ModelVersion).order_by(ModelVersion.version_number.desc()).all()
+        return [{
+            "version": v.version_number,
+            "car_model": v.car_model_name,
+            "map": v.map_50_95,
+            "is_active": v.is_active,
+            "created_at": v.created_at.strftime("%Y-%m-%d %H:%M"),
+            "training_data": v.car_model_name # In this system, car_model_name represents the training scope
+        } for v in versions]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -85,6 +85,8 @@ export const authAPI = {
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   getModelStatus: (prompt, history = []) => api.post('/admin/model-status', { prompt, history }),
   getDailyStats: () => api.get('/admin/daily-stats'),
+  getDatasetStats: () => api.get('/admin/dataset-stats'),
+  getModelRegistry: () => api.get('/admin/model-registry'),
   openImagesFolder: () => api.post('/admin/open-images-folder'),
 };
 
