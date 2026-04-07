@@ -1,22 +1,17 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from typing import List
-from utils.dependencies import get_current_user
-from services.inference import run_batch_inference, run_threaded_inference
+from utils.dependencies import get_current_user, get_db
+from services.inference import run_threaded_inference
 from services.defect_detector import detect_defects
-from services.dataset_service import save_to_dataset
+from services.record_service import record_inference_task
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from utils.dependencies import get_db
-from models.inference_result import InferenceResult
 import asyncio
 import cv2
 import json
 import io
-import os
 import zipfile
 import time
-from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 router = APIRouter(prefix="/images", tags=["Images"])
@@ -24,6 +19,7 @@ router = APIRouter(prefix="/images", tags=["Images"])
 
 @router.post("/process", summary="Upload 4 images and receive a zipped result package")
 async def process_images(
+    background_tasks: BackgroundTasks,
     images: List[UploadFile] = File(..., description="Upload 4 images"),
     model: str = Form(...),
     metadata: str = Form(...),
@@ -93,7 +89,7 @@ async def process_images(
 
             summary_output.append({
                 "filename": filename,
-                #"predictions": results[idx].to_json(),
+                "predictions": json.loads(results[idx].tojson()),
                 "defect": defect_status
             })
 
@@ -107,56 +103,20 @@ async def process_images(
             "summary": summary_output
         }, indent=2))
 
-    # --- Save images and record result to DB ---
-    save_dir = "saved_images"
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    folder_name = f"{timestamp}_{model}"
-    full_save_path = os.path.join(save_dir, folder_name)
-    os.makedirs(full_save_path)
-
-    for filename, jpeg_bytes in rendered_images:
-        img_path = os.path.join(full_save_path, filename)
-        with open(img_path, "wb") as f:
-            f.write(jpeg_bytes)
-
-    # --- Save Structured Dataset for Retraining (New Logic) ---
-    dataset_records = []
-    is_test_set_final = False
-    
-    for idx, (filename, _) in enumerate(rendered_images):
-        # We use ORIGINAL file_bytes for retraining, NOT the Plot-rendered bytes
-        res = save_to_dataset(
-            image_bytes=file_bytes[idx],
-            result=results[idx],
-            car_model=model,
-            filename=images[idx].filename
-        )
-        dataset_records.append(res)
-        # If any of the 4 images in the batch is marked as test, track the batch as test?
-        # Alternatively, since they share a single DB entry, we'll mark is_test_set if the first one is.
-        if idx == 0:
-            is_test_set_final = res["is_test"]
-
-    # Record in Database
-    new_result = InferenceResult(
-        car_model=model,
-        image1_status=defect_statuses[0],
-        image2_status=defect_statuses[1],
-        image3_status=defect_statuses[2],
-        image4_status=defect_statuses[3],
-        is_test_set=is_test_set_final,
-        dataset_paths=json.dumps(dataset_records)
+    # --- Offload Slow Operations to Background (Disk, DB, Dataset) ---
+    background_tasks.add_task(
+        record_inference_task,
+        rendered_images=rendered_images,
+        file_bytes=file_bytes,
+        results=results,
+        model=model,
+        defect_statuses=defect_statuses,
+        original_filenames=[img.filename for img in images]
     )
-    db.add(new_result)
-    db.commit()
-    db.refresh(new_result)
 
     zip_time = time.time() - start_zip
-    total_time = time.time() - start_read
-    print(f"ZIP created. Zip+write time: {zip_time:.3f}s; total request time: {total_time:.3f}s")
+    total_latency = time.time() - start_read
+    print(f"ZIP ready for user. Latency: {total_latency:.3f}s; Offloading recording to background...")
 
 
     # Reset stream for sending

@@ -1,6 +1,6 @@
 from typing import TypedDict, Annotated, Sequence
 from langchain_groq import ChatGroq
-from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage, AIMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, END, add_messages
 from sqlalchemy.orm import Session
@@ -21,8 +21,10 @@ load_dotenv(override=True)
 class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
 
-def get_current_model_status(db: Session, prompt: str = "Summarize the current system status."):
+def get_current_model_status(db: Session, prompt: str = None, history: list = None):
     """Entry point for the admin route to interact with the LLM agent."""
+    if not prompt:
+        prompt = "Summarize the current system status."
     
     # Define Tools INSIDE to capture 'db' session via closure
     @tool
@@ -251,7 +253,19 @@ def get_current_model_status(db: Session, prompt: str = "Summarize the current s
         "4. If there is not enough data for a tool to work, simply state that and explain what is missing, without dumping unrelated statistics.\n"
         "5. Use 'mAP' (mean Average Precision) to suggest retraining when scores are below 0.75."
     ))
-    initial_state = {"messages": [system_msg, HumanMessage(content=prompt)]}
+    # Convert history list (dicts) to LangChain messages
+    history_messages = []
+    if history:
+        # Only take the last 10 messages to avoid token limit issues
+        for msg in history[-10:]:
+            role = msg.get('role')
+            content = msg.get('content') or ""
+            if role == 'user':
+                history_messages.append(HumanMessage(content=content))
+            elif role == 'assistant':
+                history_messages.append(AIMessage(content=content))
+    
+    initial_state = {"messages": [system_msg] + history_messages + [HumanMessage(content=prompt)]}
     try:
         final_output = app.invoke(initial_state)
         last_msg = final_output["messages"][-1]

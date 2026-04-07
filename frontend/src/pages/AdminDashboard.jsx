@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authAPI } from '../services/api'
 import './AdminDashboard.css'
@@ -8,10 +8,18 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 const AdminDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate()
   const [modelStatus, setModelStatus] = useState(null)
+  const [chatHistory, setChatHistory] = useState([])
   const [prompt, setPrompt] = useState("")
   const [isAsking, setIsAsking] = useState(false)
   const [dailyStats, setDailyStats] = useState([])
   const [loadingStats, setLoadingStats] = useState(true)
+  const scrollRef = useRef(null)
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [chatHistory, isAsking])
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -24,16 +32,30 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   const fetchModelStatus = async (customPrompt = null) => {
     setIsAsking(true);
+    const currentHistory = [...chatHistory];
+
+    if (customPrompt) {
+      setChatHistory(prev => [...prev, { role: 'user', content: customPrompt }]);
+    }
+
     try {
-      const response = await authAPI.getModelStatus(customPrompt);
+      const response = await authAPI.getModelStatus(customPrompt, currentHistory);
       setModelStatus(response.data);
-      if (customPrompt) setPrompt("");
+      if (customPrompt) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: response.data.message }]);
+        setPrompt("");
+      } else {
+        // First load or full refresh
+        setChatHistory([{ role: 'assistant', content: response.data.message }]);
+      }
     } catch (error) {
       console.error("Failed to fetch model status:", error);
-      setModelStatus(prev => ({
-        ...prev,
-        message: "Error: Could not reach the AI agent. Please check your API key."
-      }));
+      const errorMsg = "Error: Could not reach the AI agent. Please check your API key.";
+      if (customPrompt) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: errorMsg }]);
+      } else {
+        setChatHistory([{ role: 'assistant', content: errorMsg }]);
+      }
     } finally {
       setIsAsking(false);
     }
@@ -120,10 +142,23 @@ const AdminDashboard = ({ user, onLogout }) => {
         <div className="dashboard-right-panel">
           <div className="admin-card agent-sidebar">
             <h3>AI System Agent</h3>
-            <div className="agent-display">
-              <p className="agent-msg-sidebar">
-                {isAsking ? "Processing request..." : (modelStatus?.message || "Ready for your command.")}
-              </p>
+            <div className="agent-display" ref={scrollRef}>
+              {chatHistory.length === 0 ? (
+                <p className="agent-msg-sidebar italic">Ready for your command.</p>
+              ) : (
+                chatHistory.map((msg, idx) => (
+                  <div key={idx} className={`chat-bubble ${msg.role}`}>
+                    <div className="bubble-header">{msg.role === 'user' ? 'You' : 'Agent'}</div>
+                    <div className="bubble-content">{msg.content}</div>
+                  </div>
+                ))
+              )}
+              {isAsking && (
+                <div className="chat-bubble assistant processing">
+                   <div className="bubble-header">Agent</div>
+                   <div className="bubble-content">Thinking...</div>
+                </div>
+              )}
             </div>
 
             <div className="agent-chat-controls">

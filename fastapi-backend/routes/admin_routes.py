@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from schemas.admin_schema import AdminCreate, AdminLogin
+from schemas.admin_schema import AdminCreate, AdminLogin, ChatContextRequest
 from controllers.admin_controller import register_admin, login_admin
 from utils.dependencies import get_db, get_current_admin
 from agents.model_agent import get_current_model_status
@@ -28,13 +28,17 @@ def login(admin: AdminLogin, db: Session = Depends(get_db)):
 def dashboard(current_admin=Depends(get_current_admin)):
     return {"message": f"Welcome {current_admin.username} to admin dashboard!"}
 
-@router.get("/model-status")
-def model_status(prompt: str = "Summarize the current system status.", db: Session = Depends(get_db), current_admin=Depends(get_current_admin)):
-    status_data = get_current_model_status(db, prompt=prompt)
+@router.post("/model-status")
+def model_status(request: ChatContextRequest, db: Session = Depends(get_db), current_admin=Depends(get_current_admin)):
+    # Convert history items to dicts for the agent
+    history = [m.dict() for m in request.history] if request.history else []
+    # Ensure prompt is never None to avoid Pydantic validation errors in LangChain
+    prompt = request.prompt or "Summarize the current system status."
+    status_data = get_current_model_status(db, prompt=prompt, history=history)
     return status_data
 
 # --- User Management Routes ---
-from typing import List
+from typing import List, Optional
 from schemas.user_schema import UserResponse, UserUpdate
 from controllers.admin_controller import get_all_users, update_user, delete_user
 from fastapi import HTTPException
@@ -98,6 +102,23 @@ def get_daily_stats(db: Session = Depends(get_db), current_admin=Depends(get_cur
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- Dataset Management ---
+from services.dataset_versioning import create_dataset_snapshot, list_snapshots
+
+@router.post("/dataset/snapshot")
+def snapshot_dataset(version_name: Optional[str] = None, current_admin=Depends(get_current_admin)):
+    """Create a versioned snapshot of the current dataset."""
+    result = create_dataset_snapshot(version_name)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+@router.get("/dataset/versions")
+def get_dataset_versions(current_admin=Depends(get_current_admin)):
+    """List all available dataset snapshots."""
+    return {"versions": list_snapshots()}
+
 
 @router.post("/open-images-folder")
 def open_images_folder(current_admin=Depends(get_current_admin)):

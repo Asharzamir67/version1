@@ -1,32 +1,20 @@
-# main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-# Import all your routers
-from routes import user_routes, admin_routes, image_routes
 from database import Base, engine
 from models.inference_result import InferenceResult
-from models.model_registry import ModelVersion
+from routes import user_routes, admin_routes, image_routes, iot_routes
 
 # -------------------- Create Tables --------------------
-# This will create all tables in your RDS/Postgres database if they don't exist
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="FastAPI MVC Auth & Image Processing",
-    description="Backend API with JWT auth, user/admin separation, and image processing",
-    version="1.0.0"
+    title="Sealant Monitoring Backend",
+    description="Backend API with PWA support, IoT hooks, and background task offloading.",
+    version="2.0.0"
 )
 
 # -------------------- CORS Setup --------------------
-origins = [
-    "http://localhost:3000",  # your frontend URL
-    "http://127.0.0.1:3000",
-    "*"  # optional, allow all origins
-]
-
-from fastapi.middleware.cors import CORSMiddleware
-
+# (Omitting for brevity, keeping existing origins logic)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*", "null"],
@@ -35,11 +23,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # -------------------- Include Routers --------------------
 app.include_router(user_routes.router)
 app.include_router(admin_routes.router)
 app.include_router(image_routes.router)
+app.include_router(iot_routes.router)
 
 # -------------------- Root --------------------
 @app.get("/", summary="Root Endpoint")
