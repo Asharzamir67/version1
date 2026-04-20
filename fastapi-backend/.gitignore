@@ -13,3 +13,5 @@ venv/
 image_check.http
 /temp_results
 test_agent.py
+/saved_images
+/dataset

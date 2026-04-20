@@ -89,7 +89,7 @@ async def process_images(
 
             summary_output.append({
                 "filename": filename,
-                "predictions": json.loads(results[idx].tojson()),
+                "predictions": json.loads(results[idx].to_json()),
                 "defect": defect_status
             })
 
