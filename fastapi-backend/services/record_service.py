@@ -50,7 +50,7 @@ def record_inference_task(rendered_images, file_bytes, results, model, defect_st
 
         # 3. Record in Database
         new_result = InferenceResult(
-            car_model=model,
+            car_model=mapped_model,
             image1_status=defect_statuses[0],
             image2_status=defect_statuses[1],
             image3_status=defect_statuses[2],

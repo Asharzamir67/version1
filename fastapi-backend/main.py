@@ -59,6 +59,29 @@ app.include_router(iot_routes.router)
 async def root():
     return {"message": "Welcome to the FastAPI MVC Backend!"}
 
+# -------------------- WebSockets --------------------
+from services.websocket_service import manager
+from fastapi import WebSocket, WebSocketDisconnect
+
+@app.websocket("/ws/training-status")
+async def training_status_ws(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time model retraining status updates.
+    """
+    await manager.connect(websocket)
+    try:
+        # Send initial status immediately upon connection
+        from services.training_service import get_training_status
+        await websocket.send_json(get_training_status())
+        
+        while True:
+            # Keep connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception:
+        manager.disconnect(websocket)
+
 # -------------------- AI Supervisor Insights --------------------
 from fastapi import Query, Depends
 from sqlalchemy.orm import Session

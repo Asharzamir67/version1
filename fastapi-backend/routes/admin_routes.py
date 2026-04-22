@@ -192,6 +192,12 @@ def get_dataset_versions(current_admin=Depends(get_current_admin)):
     """List all available dataset snapshots."""
     return {"versions": list_snapshots()}
 
+@router.get("/training-status")
+def get_training_status_route(current_admin=Depends(get_current_admin)):
+    """Fetch the current status of the model retraining background task."""
+    from services.training_service import get_training_status
+    return get_training_status()
+
 
 @router.post("/open-images-folder")
 def open_images_folder(current_admin=Depends(get_current_admin)):

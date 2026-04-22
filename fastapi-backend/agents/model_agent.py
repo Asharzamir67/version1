@@ -125,33 +125,19 @@ class AgentManager:
                 print(f"--- [AGENT] Executing Tool: {name} with args: {args} ---")
                 
                 try:
-                    if name == "get_system_stats":
-                        output = tools.get_system_stats(db)
-                    elif name == "get_active_model_info":
-                        output = tools.get_active_model_info(db)
-                    elif name == "get_car_model_stats":
-                        output = tools.get_car_model_stats(db, **args)
-                    elif name == "get_retraining_dataset_stats":
-                        output = tools.get_retraining_dataset_stats(db)
-                    elif name == "get_quality_analytics":
-                        output = tools.get_quality_analytics(db)
-                    elif name == "analyze_ng_patterns":
-                        output = tools.analyze_ng_patterns(db, **args)
-                    elif name == "get_model_registry_history":
-                        output = tools.get_model_registry_history(db)
-                    elif name == "start_model_retraining":
-                        output = tools.start_model_retraining(**args)
-                    elif name == "log_system_observation":
-                        output = tools.log_system_observation(db, **args)
-                    elif name == "get_past_observations":
-                        limit_val = args.get("limit", 5)
-                        output = tools.get_past_observations(db, limit=int(limit_val) if isinstance(limit_val, str) else limit_val)
-                    elif name == "audit_system_quality":
-                        output = tools.audit_system_quality(db)
-                    elif name == "get_system_error_logs":
-                        output = tools.get_system_error_logs(**args)
+                    # Map the tool name to the actual implementation function in the tools module
+                    tool_func = getattr(tools, name, None)
+                    
+                    if tool_func:
+                        if name in ["get_system_stats", "get_active_model_info", "get_retraining_dataset_stats", "get_quality_analytics", "get_model_registry_history", "audit_system_quality"]:
+                            output = tool_func(db)
+                        elif name in ["get_car_model_stats", "analyze_ng_patterns", "log_system_observation", "get_past_observations"]:
+                            output = tool_func(db, **args)
+                        else:
+                            # Tools that don't require a DB session
+                            output = tool_func(**args)
                     else:
-                        output = f"Error: Tool '{name}' not found."
+                        output = f"Error: Implementation for tool '{name}' not found in tools module."
                 except Exception as e:
                     output = f"Error executing {name}: {str(e)}"
                 

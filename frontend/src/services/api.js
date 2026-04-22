@@ -92,6 +92,7 @@ export const authAPI = {
   getChatHistory: (threadId = null) => api.get('/admin/chat-history', { params: { thread_id: threadId } }),
   getDailyStats: () => api.get('/admin/daily-stats'),
   getDatasetStats: () => api.get('/admin/dataset-stats'),
+  getTrainingStatus: () => api.get('/admin/training-status'),
   getModelRegistry: () => api.get('/admin/model-registry'),
   getSystemObservations: (limit = 50, offset = 0) => api.get(`/api/system-observations?limit=${limit}&offset=${offset}`),
   openImagesFolder: () => api.post('/admin/open-images-folder'),

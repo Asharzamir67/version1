@@ -16,8 +16,9 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [datasetStats, setDatasetStats] = useState([])
   const [modelRegistry, setModelRegistry] = useState([])
   const [systemObservations, setSystemObservations] = useState([])
-  const [activeTab, setActiveTab] = useState('analytics') // 'analytics', 'dataset', 'registry', 'insights'
+  const [activeTab, setActiveTab] = useState('analytics') // 'analytics', 'dataset', 'registry', 'insights', 'retraining'
   const [loadingData, setLoadingData] = useState(true)
+  const [trainingStatus, setTrainingStatus] = useState({ status: 'Idle', stage: 'Idle', progress: 0, message: 'Ready' })
   const scrollRef = useRef(null)
 
   useEffect(() => {
@@ -39,6 +40,51 @@ const AdminDashboard = ({ user, onLogout }) => {
       loadTabData()
     }
   }, [user, activeTab])
+
+  // Real-time training status via WebSockets
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+
+    // Connect to WebSocket for real-time progress updates
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = 'localhost:8000'; // Ensure this matches your backend host
+    const wsUrl = `${protocol}//${host}/ws/training-status`;
+    
+    let ws;
+    let reconnectTimer;
+
+    const connect = () => {
+      console.log("--- [DASHBOARD] Connecting to WebSocket ---");
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        setTrainingStatus(prev => {
+          if (data.status === 'Idle' && prev.status === 'Busy') {
+            if (activeTab === 'registry') loadTabData();
+          }
+          return data;
+        });
+      };
+
+      ws.onclose = () => {
+        console.log("--- [DASHBOARD] WebSocket Disconnected. Reconnecting... ---");
+        reconnectTimer = setTimeout(connect, 5000);
+      };
+
+      ws.onerror = (err) => {
+        console.error("--- [DASHBOARD] WebSocket Error ---", err);
+        ws.close();
+      };
+    };
+
+    connect();
+
+    return () => {
+      if (ws) ws.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+  }, [user]);
 
   const loadChatHistory = async () => {
     try {
@@ -109,13 +155,6 @@ const AdminDashboard = ({ user, onLogout }) => {
     }
   }
 
-  const handleOpenFolder = async () => {
-    try {
-      await authAPI.openImagesFolder()
-    } catch (error) {
-      console.error("Failed to open folder:", error)
-    }
-  }
 
   const handleLogout = async () => {
     if (onLogout) await onLogout()
@@ -145,6 +184,12 @@ const AdminDashboard = ({ user, onLogout }) => {
                 onClick={() => setActiveTab('analytics')}
               >
                 Inference Analytics
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'retraining' ? 'active' : ''}`}
+                onClick={() => setActiveTab('retraining')}
+              >
+                Model Retraining {trainingStatus.status === 'Busy' && <span className="pulse-dot"></span>}
               </button>
               <button 
                 className={`tab-btn ${activeTab === 'dataset' ? 'active' : ''}`}
@@ -255,21 +300,94 @@ const AdminDashboard = ({ user, onLogout }) => {
                       <AIInsights observations={systemObservations} />
                     </div>
                   )}
+
+                  {activeTab === 'retraining' && (
+                    <div className="retraining-tab">
+                      <div className="tab-header-flex">
+                        <h3>AI Model Retraining Progress</h3>
+                        {trainingStatus.status === 'Busy' && <div className="live-badge">LIVE</div>}
+                      </div>
+                      
+                      <div className="retraining-status-container">
+                        <div className="status-grid">
+                          <div className="status-card">
+                            <span className="label">Current Status</span>
+                            <div className={`value bold ${trainingStatus.status.toLowerCase()}`}>
+                              {trainingStatus.status}
+                            </div>
+                          </div>
+                          <div className="status-card">
+                            <span className="label">Current Stage</span>
+                            <div className="value bold">{trainingStatus.stage}</div>
+                          </div>
+                          <div className="status-card">
+                            <span className="label">Car Model</span>
+                            <div className="value">{trainingStatus.car_model || 'None'}</div>
+                          </div>
+                        </div>
+                        
+                        <div className="progress-section">
+                          <div className="progress-info-row">
+                            <span>Processing Completion</span>
+                            <span className="bold">{trainingStatus.progress}%</span>
+                          </div>
+                          <div className="progress-bar-container">
+                            <div 
+                              className={`progress-bar-fill ${trainingStatus.status === 'Busy' ? 'animating' : ''}`} 
+                              style={{ width: `${trainingStatus.progress}%` }}
+                            ></div>
+                          </div>
+                          {trainingStatus.current_epoch > 0 && (
+                            <div className="epoch-indicator">
+                              Epoch {trainingStatus.current_epoch} of {trainingStatus.total_epochs}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="status-message-box">
+                          <div className="msg-icon">ℹ️</div>
+                          <div className="msg-content">
+                            <p>{trainingStatus.message}</p>
+                            {trainingStatus.last_update && (
+                              <small>Last updated at: {trainingStatus.last_update}</small>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="workflow-timeline">
+                          <h4>Training Workflow</h4>
+                          <div className="timeline-items">
+                            <div className={`timeline-item ${trainingStatus.stage === 'Preparing' ? 'active' : ''} ${trainingStatus.progress > 20 ? 'completed' : ''}`}>
+                              <div className="dot"></div>
+                              <div className="content">
+                                <h5>1. Dataset Preparation</h5>
+                                <p>Scanning folders, compiling images, and generating YOLO configuration.</p>
+                              </div>
+                            </div>
+                            <div className={`timeline-item ${trainingStatus.stage === 'Training' ? 'active' : ''} ${trainingStatus.progress > 80 ? 'completed' : ''}`}>
+                              <div className="dot"></div>
+                              <div className="content">
+                                <h5>2. Neural Network Training</h5>
+                                <p>Fine-tuning the model weights. Most resource-intensive phase.</p>
+                              </div>
+                            </div>
+                            <div className={`timeline-item ${trainingStatus.stage === 'Evaluating' ? 'active' : ''} ${trainingStatus.progress === 100 ? 'completed' : ''}`}>
+                              <div className="dot"></div>
+                              <div className="content">
+                                <h5>3. Evaluation & Promotion</h5>
+                                <p>Comparing Challenger vs Champion performance for automatic promotion.</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
           </div>
 
-          <div className="quick-actions-container">
-            <button className="quick-action-btn-primary" onClick={handleOpenFolder}>
-              <span className="icon">📁</span>
-              Open Saved Images
-            </button>
-            <button className="quick-action-btn-secondary">
-              <span className="icon">⚙️</span>
-              Placeholder Action
-            </button>
-          </div>
         </div>
 
         {/* Right Section (30%) */}
