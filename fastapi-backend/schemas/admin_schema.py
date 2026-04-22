@@ -16,3 +16,4 @@ class ChatMessage(BaseModel):
 class ChatContextRequest(BaseModel):
     prompt: Optional[str] = "Summarize the current system status."
     history: Optional[List[ChatMessage]] = []
+    thread_id: Optional[str] = None

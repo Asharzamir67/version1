@@ -28,3 +28,12 @@ class SystemObservation(Base):
     observation = Column(String)
     action_taken = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class ChatMessage(Base):
+    __tablename__ = "chat_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    thread_id = Column(String, index=True) # Unique ID for each admin/session
+    role = Column(String) # 'user' or 'assistant'
+    content = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

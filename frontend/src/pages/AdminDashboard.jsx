@@ -30,9 +30,29 @@ const AdminDashboard = ({ user, onLogout }) => {
     if (!user || user.role !== 'admin') {
       navigate('/')
     } else {
+      loadChatHistory()
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (user && user.role === 'admin') {
       loadTabData()
     }
-  }, [user, navigate, activeTab])
+  }, [user, activeTab])
+
+  const loadChatHistory = async () => {
+    try {
+      const res = await authAPI.getChatHistory()
+      if (res.data && res.data.length > 0) {
+        setChatHistory(res.data)
+      } else {
+        setChatHistory([{ role: 'assistant', content: "Hello Admin! I'm your AI System Assistant. How can I help you today?" }])
+      }
+    } catch (error) {
+      console.error("Failed to load chat history:", error)
+      setChatHistory([{ role: 'assistant', content: "Hello Admin! I'm your AI System Assistant. How can I help you today?" }])
+    }
+  }
 
   const fetchModelStatus = async (customPrompt = null) => {
     setIsAsking(true);
@@ -43,13 +63,14 @@ const AdminDashboard = ({ user, onLogout }) => {
     }
 
     try {
+      // Note: Backend uses the token to identify the admin (thread_id)
       const response = await authAPI.getModelStatus(customPrompt, currentHistory);
       setModelStatus(response.data);
       if (customPrompt) {
         setChatHistory(prev => [...prev, { role: 'assistant', content: response.data.message }]);
         setPrompt("");
       } else {
-        // First load or full refresh
+        // First load or full refresh - if we get here from System Refresh, we overwrite
         setChatHistory([{ role: 'assistant', content: response.data.message }]);
       }
     } catch (error) {

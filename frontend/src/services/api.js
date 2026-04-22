@@ -22,7 +22,7 @@ const getApiBaseUrl = () => {
   }
 
   // For Electron or production, use fallback
-  return 'http://localhost:8000';
+  return 'http://localhost:8001';
 };
 
 // Create axios instance
@@ -88,7 +88,8 @@ export const authAPI = {
   getUsers: () => api.get('/admin/users'),
   updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
-  getModelStatus: (prompt, history = []) => api.post('/admin/model-status', { prompt, history }),
+  getModelStatus: (prompt, history = [], threadId = null) => api.post('/admin/model-status', { prompt, history, thread_id: threadId }),
+  getChatHistory: (threadId = null) => api.get('/admin/chat-history', { params: { thread_id: threadId } }),
   getDailyStats: () => api.get('/admin/daily-stats'),
   getDatasetStats: () => api.get('/admin/dataset-stats'),
   getModelRegistry: () => api.get('/admin/model-registry'),

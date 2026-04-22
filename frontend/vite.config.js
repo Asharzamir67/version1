@@ -48,17 +48,22 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/user': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8001',
         changeOrigin: true,
         secure: false,
       },
       '/admin': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8001',
         changeOrigin: true,
         secure: false,
       },
       '/images': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api': {
+        target: 'http://localhost:8001',
         changeOrigin: true,
         secure: false,
       }

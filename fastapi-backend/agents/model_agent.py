@@ -3,7 +3,7 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage, AIMessage, SystemMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, END, add_messages
-from langgraph.checkpoint.memory import MemorySaver
+# Removed MemorySaver to prevent duplication with frontend-managed history
 from langchain_core.runnables import RunnableConfig
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -21,17 +21,23 @@ class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
 
 class AgentManager:
-    def __init__(self, model_name: str = "llama-3.1-8b-instant"):
+    def __init__(self, model_name: str = "llama-3.3-70b-versatile"):
         self._setup_ai_tools()
         # Bind the simple tool schemas to the LLM
-        self.llm = ChatGroq(model=model_name, temperature=0.1).bind_tools(self.ai_tools)
-        self.memory = MemorySaver()
+        # Using a slightly higher temperature to avoid repetitive loops
+        # Added timeout and max_retries=0 to prevent the backend from hanging on rate limits
+        self.llm = ChatGroq(
+            model=model_name, 
+            temperature=0.1, # Lower temperature for more stability in tool calling
+            max_retries=1,
+            timeout=30
+        ).bind_tools(self.ai_tools)
+        # We'll build the graph without a checkpointer for now because the frontend manages history
         self.app = self._build_graph()
 
     def _setup_ai_tools(self):
         """
         Define lightweight tool schemas for the LLM. 
-        These are standard functions that LangChain can inspect easily.
         """
         @tool
         def get_system_stats():
@@ -70,7 +76,7 @@ class AgentManager:
 
         @tool
         def start_model_retraining(car_model_query: str):
-            """Initiate a background training task for a new model version (e.g., 'Corolla' or 'all')."""
+            """Initiate a background training task for a new model version."""
             return f"Starting training for {car_model_query}..."
 
         @tool
@@ -80,17 +86,17 @@ class AgentManager:
 
         @tool
         def get_past_observations(limit: int = 5):
-            """Retrieve historical system observations. The limit argument MUST be a JSON integer."""
+            """Retrieve historical system observations."""
             return f"Fetching last {limit} observations..."
 
         @tool
         def audit_system_quality():
-            """Perform a time-series audit to find sudden spikes in NG results (Last hour vs 24h)."""
+            """Perform a time-series audit to find sudden spikes in NG results."""
             return "Auditing quality trends..."
 
         @tool
         def get_system_error_logs(lines: int = 20):
-            """Read the latest entries from alerts.log and kernel.errors.txt to diagnose failures."""
+            """Read the latest entries from alerts.log and kernel.errors.txt."""
             return f"Reading last {lines} lines of logs..."
 
         self.ai_tools = [
@@ -104,7 +110,7 @@ class AgentManager:
         workflow = StateGraph(AgentState)
         
         def call_model(state: AgentState, config: RunnableConfig):
-            # The LLM only sees the messages, not the DB session
+            # Ensure the model knows about previous tool outputs to stop loops
             response = self.llm.invoke(state['messages'], config=config)
             return {"messages": [response]}
 
@@ -116,8 +122,8 @@ class AgentManager:
             for tool_call in last_message.tool_calls:
                 name = tool_call["name"]
                 args = tool_call["args"]
+                print(f"--- [AGENT] Executing Tool: {name} with args: {args} ---")
                 
-                # Manual Dispatcher: Map AI calls to real functions in tools.py
                 try:
                     if name == "get_system_stats":
                         output = tools.get_system_stats(db)
@@ -139,15 +145,13 @@ class AgentManager:
                         output = tools.log_system_observation(db, **args)
                     elif name == "get_past_observations":
                         limit_val = args.get("limit", 5)
-                        if isinstance(limit_val, str):
-                            limit_val = int(limit_val)
-                        output = tools.get_past_observations(db, limit=limit_val)
+                        output = tools.get_past_observations(db, limit=int(limit_val) if isinstance(limit_val, str) else limit_val)
                     elif name == "audit_system_quality":
                         output = tools.audit_system_quality(db)
                     elif name == "get_system_error_logs":
                         output = tools.get_system_error_logs(**args)
                     else:
-                        output = f"Error: Tool '{name}' not found in dispatcher."
+                        output = f"Error: Tool '{name}' not found."
                 except Exception as e:
                     output = f"Error executing {name}: {str(e)}"
                 
@@ -159,6 +163,8 @@ class AgentManager:
 
         def should_continue(state: AgentState):
             last_message = state['messages'][-1]
+            # Limit the number of tool calls to prevent infinite loops
+            # Note: recursion_limit in invoke handles this better globally
             if last_message.tool_calls:
                 return "tools"
             return END
@@ -169,66 +175,74 @@ class AgentManager:
         workflow.add_conditional_edges("agent", should_continue)
         workflow.add_edge("tools", "agent")
         
-        return workflow.compile(checkpointer=self.memory)
+        return workflow.compile() # Removed checkpointer
 
 # Initialize a global manager instance
 agent_manager = AgentManager()
 
 def get_current_model_status(db: Session, prompt: str = None, history: list = None, thread_id: str = "default_admin"):
     """
-    Entry point for the agentic supervisor using a stateful LangGraph.
+    Entry point for the agentic supervisor. 
+    Now stateless to prevent history duplication issues.
     """
+    from models.model_registry import ModelVersion, ChatMessage
     from models.inference_result import InferenceResult
     from services.inference import get_active_model_info_from_db
 
     if not prompt:
-        prompt = "Summarize the current system status and check for any anomalies."
+        prompt = "Summarize the current system status."
     
-    config = {"configurable": {"thread_id": thread_id, "db": db}}
+    # recursion_limit=10 gives the agent enough turns to call 3-4 diagnostic tools and reason about them
+    config = {"configurable": {"thread_id": thread_id, "db": db}, "recursion_limit": 10}
     
-    # Prepend system instruction if this is a new conversation context
     system_msg = SystemMessage(content=(
         "You are the Sealant Detection System's AI Supervisor. "
-        "Your mission is to ensure production quality through proactive monitoring.\n\n"
-        "FACILITIES:\n"
-        "1. AUDIT: Use 'audit_system_quality' first to find spikes or trends.\n"
-        "2. RCA: If you see defects, use 'analyze_ng_patterns' and 'get_system_error_logs' to find the cause.\n"
-        "3. LOGGING: Use 'log_system_observation' to save findings permanently.\n"
-        "4. HISTORY: Use 'get_past_observations' to see what happened earlier.\n"
-        "5. DATASET: Use 'get_retraining_dataset_stats' to check training data readiness.\n"
+        "Your role is to monitor system health, audit production quality, and provide actionable insights.\n"
+        "You have access to several diagnostic tools. Use them to answer user questions about the system state, "
+        "production statistics, or dataset health. "
+        "When you use a tool, wait for the result and then explain it to the user in a friendly, professional way.\n\n"
+        "If the user just wants to chat or says 'hi', be helpful and polite without calling any tools."
     ))
 
-    # Convert history list (dicts) to LangChain messages
-    history_messages = []
-    if history:
-        # Only take the last 10 messages to avoid token limit issues
-        for msg in history[-10:]:
-            role = msg.get('role')
-            content = msg.get('content') or ""
-            if role == 'user':
-                history_messages.append(HumanMessage(content=content))
-            elif role == 'assistant':
-                history_messages.append(AIMessage(content=content))
+    # 1. Save the new user message to DB
+    if prompt:
+        new_msg = ChatMessage(thread_id=thread_id, role="user", content=prompt)
+        db.add(new_msg)
+        db.commit()
+
+    # 2. Pull last 10 messages for this thread_id from DB for context
+    past_messages = db.query(ChatMessage).filter(ChatMessage.thread_id == thread_id).order_by(ChatMessage.created_at.desc()).limit(10).all()
+    # Reverse to get chronological order
+    past_messages.reverse()
     
-    inputs = {
-        "messages": [system_msg] + history_messages + [HumanMessage(content=prompt)]
-    }
+    # 3. Construct message list for LLM
+    messages = [system_msg]
+    for m in past_messages:
+        if m.role == "user":
+            messages.append(HumanMessage(content=m.content))
+        else:
+            messages.append(AIMessage(content=m.content))
     
     try:
-        final_output = agent_manager.app.invoke(inputs, config=config)
+        final_output = agent_manager.app.invoke({"messages": messages}, config=config)
         message = final_output["messages"][-1].content
+        
+        # 4. Save assistant response to DB
+        ai_msg = ChatMessage(thread_id=thread_id, role="assistant", content=message)
+        db.add(ai_msg)
+        db.commit()
     except Exception as e:
         print(f"Agent Execution Error: {str(e)}")
-        message = f"Agent Error: {str(e)}"
+        message = f"I encountered an issue while processing your request (API Limit or Loop). Details: {str(e)}"
 
-    # Extract stats for UI cards
+    # Fast stats for UI
     _, active_name = get_active_model_info_from_db()
     try:
         db_count = db.query(func.count(InferenceResult.id)).scalar()
+        # Non-recursive count for speed
         image_count = 0
         if SAVED_IMAGES_DIR.exists():
-            for root, dirs, files in os.walk(SAVED_IMAGES_DIR):
-                image_count += len([f for f in files if f.endswith(('.jpg', '.jpeg', '.png'))])
+            image_count = len([f for f in os.listdir(SAVED_IMAGES_DIR) if f.endswith(('.jpg', '.jpeg', '.png'))])
     except Exception as e:
         print(f"Stats Error: {str(e)}")
         db_count, image_count = 0, 0

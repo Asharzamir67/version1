@@ -5,12 +5,13 @@ from controllers.admin_controller import register_admin, login_admin
 from utils.dependencies import get_db, get_current_admin
 from agents.model_agent import get_current_model_status
 from models.inference_result import InferenceResult
-from models.model_registry import ModelVersion
+from models.model_registry import ModelVersion, ChatMessage
 from sqlalchemy import func, and_, cast, Date
 import os
 import subprocess
 from datetime import datetime, timedelta
 from config import DATASET_DIR, SAVED_IMAGES_DIR, STATUS_OK, STATUS_NG
+from typing import List, Optional
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -34,13 +35,21 @@ def dashboard(current_admin=Depends(get_current_admin)):
 def model_status(request: ChatContextRequest, db: Session = Depends(get_db), current_admin=Depends(get_current_admin)):
     # Convert history items to dicts for the agent
     history = [m.dict() for m in request.history] if request.history else []
+    # Use provided thread_id or fallback to the logged-in admin's username for per-user isolation
+    thread_id = request.thread_id or current_admin.username
     # Ensure prompt is never None to avoid Pydantic validation errors in LangChain
     prompt = request.prompt or "Summarize the current system status."
-    status_data = get_current_model_status(db, prompt=prompt, history=history)
+    status_data = get_current_model_status(db, prompt=prompt, history=history, thread_id=thread_id)
     return status_data
 
+@router.get("/chat-history")
+def get_chat_history(thread_id: Optional[str] = None, db: Session = Depends(get_db), current_admin=Depends(get_current_admin)):
+    """Fetch persistent chat history for a specific admin/thread."""
+    tid = thread_id or current_admin.username
+    messages = db.query(ChatMessage).filter(ChatMessage.thread_id == tid).order_by(ChatMessage.created_at.asc()).all()
+    return [{"role": m.role, "content": m.content, "timestamp": m.created_at} for m in messages]
+
 # --- User Management Routes ---
-from typing import List, Optional
 from schemas.user_schema import UserResponse, UserUpdate
 from controllers.admin_controller import get_all_users, update_user, delete_user
 from fastapi import HTTPException

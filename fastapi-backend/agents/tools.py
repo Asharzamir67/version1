@@ -1,4 +1,3 @@
-from langchain_core.tools import tool
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import os
@@ -15,8 +14,12 @@ def get_system_stats(db: Session):
         db_count = db.query(func.count(InferenceResult.id)).scalar()
         total_images = 0
         if SAVED_IMAGES_DIR.exists():
-            for root, dirs, files in os.walk(SAVED_IMAGES_DIR):
-                total_images += len([f for f in files if f.endswith(('.jpg', '.jpeg', '.png'))])
+            # Use os.scandir for better performance on larger directories
+            with os.scandir(SAVED_IMAGES_DIR) as it:
+                total_images = sum(1 for entry in it if entry.is_file() and entry.name.lower().endswith(('.jpg', '.jpeg', '.png')))
+        
+        if db_count == 0 and total_images == 0:
+            return "The system is currently empty. No database records or saved images found."
         return f"Database Records: {db_count}, Total Saved Images: {total_images}"
     except Exception as e:
         return f"Error fetching stats: {str(e)}"
@@ -167,7 +170,6 @@ def get_model_registry_history(db: Session):
     except Exception as e:
         return f"Error fetching registry history: {str(e)}"
 
-@tool
 def start_model_retraining(car_model_query: str):
     """
     Initiate a background training task to create a new model version.
