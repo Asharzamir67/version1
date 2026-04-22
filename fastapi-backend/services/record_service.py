@@ -5,6 +5,7 @@ from datetime import datetime
 from database import SessionLocal
 from models.inference_result import InferenceResult
 from services.dataset_service import save_to_dataset
+from utils.mapping import map_car_model
 
 def record_inference_task(rendered_images, file_bytes, results, model, defect_statuses, original_filenames):
     """
@@ -15,18 +16,20 @@ def record_inference_task(rendered_images, file_bytes, results, model, defect_st
     """
     db = SessionLocal()
     try:
-        # 1. Save Rendered Images to Disk (for visualization/audit)
-        save_dir = "saved_images"
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-
+        # 0. Map model name to target folder
+        mapped_model = map_car_model(model)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        folder_name = f"{timestamp}_{model}"
-        full_save_path = os.path.join(save_dir, folder_name)
-        os.makedirs(full_save_path)
+
+        # 1. Save Rendered Images to Disk (for visualization/audit)
+        # All images for a model now go into a single folder (e.g., saved_images/corolla/)
+        from config import SAVED_IMAGES_DIR
+        full_save_path = SAVED_IMAGES_DIR / mapped_model
+        full_save_path.mkdir(parents=True, exist_ok=True)
 
         for filename, jpeg_bytes in rendered_images:
-            img_path = os.path.join(full_save_path, filename)
+            # Prefix filename with timestamp to prevent collisions in the shared folder
+            unique_filename = f"{timestamp}_{filename}"
+            img_path = os.path.join(full_save_path, unique_filename)
             with open(img_path, "wb") as f:
                 f.write(jpeg_bytes)
 
@@ -38,7 +41,7 @@ def record_inference_task(rendered_images, file_bytes, results, model, defect_st
             res = save_to_dataset(
                 image_bytes=file_bytes[idx],
                 result=results[idx],
-                car_model=model,
+                car_model=mapped_model,
                 filename=original_filenames[idx]
             )
             dataset_records.append(res)

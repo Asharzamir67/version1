@@ -10,6 +10,7 @@ from sqlalchemy import func, and_, cast, Date
 import os
 import subprocess
 from datetime import datetime, timedelta
+from config import DATASET_DIR, SAVED_IMAGES_DIR, STATUS_OK, STATUS_NG
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -93,9 +94,9 @@ def get_daily_stats(db: Session = Depends(get_db), current_admin=Depends(get_cur
                 for s in statuses:
                     if s:
                         s_lower = s.lower()
-                        if s_lower == 'ok':
+                        if s_lower == STATUS_OK:
                             stats_map[date_str]["ok"] += 1
-                        elif s_lower == 'notgood' or s_lower == 'ng':
+                        elif s_lower == STATUS_NG or s_lower == 'ng':
                             stats_map[date_str]["ng"] += 1
         
         # Convert map back to an ordered list for the chart
@@ -113,10 +114,9 @@ def get_dataset_stats(db: Session = Depends(get_db), current_admin=Depends(get_c
         models = [m[0] for m in car_models if m[0]]
         
         # 2. Check filesystem for all available models in the dataset folder
-        dataset_dir = "dataset"
-        if os.path.exists(dataset_dir):
-            for model_folder in os.listdir(dataset_dir):
-                if os.path.isdir(os.path.join(dataset_dir, model_folder)) and model_folder not in models:
+        if DATASET_DIR.exists():
+            for model_folder in os.listdir(DATASET_DIR):
+                if (DATASET_DIR / model_folder).is_dir() and model_folder not in models:
                     models.append(model_folder)
         
         results = []
@@ -132,11 +132,11 @@ def get_dataset_stats(db: Session = Depends(get_db), current_admin=Depends(get_c
             # Query Filesystem for physical image counts
             train_fs = 0
             test_fs = 0
-            model_path = os.path.join(dataset_dir, model)
-            if os.path.exists(model_path):
+            model_path = DATASET_DIR / model
+            if model_path.exists():
                 for split, count_ref in [("train", "train_fs"), ("test", "test_fs")]:
-                    split_path = os.path.join(model_path, split, "images")
-                    if os.path.exists(split_path):
+                    split_path = model_path / split / "images"
+                    if split_path.exists():
                         count = len([f for f in os.listdir(split_path) if f.endswith(('.jpg', '.jpeg', '.png'))])
                         if split == "train": train_fs = count
                         else: test_fs = count
@@ -187,9 +187,9 @@ def get_dataset_versions(current_admin=Depends(get_current_admin)):
 @router.post("/open-images-folder")
 def open_images_folder(current_admin=Depends(get_current_admin)):
     """Open the local saved_images folder on the host machine."""
-    folder_path = os.path.abspath("saved_images")
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
+    folder_path = str(SAVED_IMAGES_DIR.resolve())
+    if not SAVED_IMAGES_DIR.exists():
+        SAVED_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     
     try:
         # Cross-platform folder opening

@@ -10,14 +10,19 @@ const getApiBaseUrl = () => {
   const isLocalhost = typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-  // For localhost dev, use proxy (vite will proxy to backend)
+  // Use environment variable if provided (for prod/dev docker)
+  const envBaseUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envBaseUrl) {
+    return envBaseUrl;
+  }
+
+  // For localhost dev without env var, use proxy
   if (isLocalhost) {
     return ''; // Empty string means use relative URLs (vite proxy will handle it)
   }
 
-  // For Electron or production, use full backend URL
-  // Change this to your backend URL
-  return 'http://localhost:8000'; // FastAPI default port
+  // For Electron or production, use fallback
+  return 'http://localhost:8000';
 };
 
 // Create axios instance

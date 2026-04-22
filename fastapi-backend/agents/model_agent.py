@@ -13,6 +13,7 @@ from services.training_service import start_retraining_background, get_training_
 import os
 import json
 from datetime import datetime, date
+from config import SAVED_IMAGES_DIR, DATASET_DIR
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -32,10 +33,9 @@ def get_current_model_status(db: Session, prompt: str = None, history: list = No
         """Query the database and filesystem to get total records and image counts."""
         try:
             db_count = db.query(func.count(InferenceResult.id)).scalar()
-            save_dir = "saved_images"
             total_images = 0
-            if os.path.exists(save_dir):
-                for root, dirs, files in os.walk(save_dir):
+            if SAVED_IMAGES_DIR.exists():
+                for root, dirs, files in os.walk(SAVED_IMAGES_DIR):
                     total_images += len([f for f in files if f.endswith(('.jpg', '.jpeg', '.png'))])
             return f"Database Records: {db_count}, Total Saved Images: {total_images}"
         except Exception as e:
@@ -113,12 +113,11 @@ def get_current_model_status(db: Session, prompt: str = None, history: list = No
             train_count = db.query(func.count(InferenceResult.id)).filter(InferenceResult.is_test_set == False).scalar()
             
             # Filesystem Stats
-            dataset_dir = "dataset"
             fs_summary = {}
-            if os.path.exists(dataset_dir):
-                for model in os.listdir(dataset_dir):
-                    model_path = os.path.join(dataset_dir, model)
-                    if os.path.isdir(model_path):
+            if DATASET_DIR.exists():
+                for model in os.listdir(DATASET_DIR):
+                    model_path = DATASET_DIR / model
+                    if model_path.is_dir():
                         fs_summary[model] = {"train": 0, "test": 0}
                         for split in ["train", "test"]:
                             split_path = os.path.join(model_path, split, "images")
@@ -128,7 +127,7 @@ def get_current_model_status(db: Session, prompt: str = None, history: list = No
             fs_str = "\n".join([f"  - {m}: {s['train']} train, {s['test']} test images" for m, s in fs_summary.items()])
             return (f"Retraining Dataset Summary:\n"
                     f"Database: {train_count} samples for training, {test_count} samples for testing.\n"
-                    f"Filesystem Storage:\n{fs_str if fs_str else '  (No model folders found in /dataset/ yet)'}")
+                    f"Filesystem Storage:\n{fs_str if fs_str else f'  (No model folders found in {DATASET_DIR} yet)'}")
         except Exception as e:
             return f"Error fetching dataset stats: {str(e)}"
 
@@ -278,10 +277,9 @@ def get_current_model_status(db: Session, prompt: str = None, history: list = No
     active_path, active_name = get_active_model_info_from_db()
     try:
         db_count = db.query(func.count(InferenceResult.id)).scalar()
-        save_dir = "saved_images"
         image_count = 0
-        if os.path.exists(save_dir):
-            for root, dirs, files in os.walk(save_dir):
+        if SAVED_IMAGES_DIR.exists():
+            for root, dirs, files in os.walk(SAVED_IMAGES_DIR):
                 image_count += len([f for f in files if f.endswith(('.jpg', '.jpeg', '.png'))])
     except:
         db_count, image_count = 0, 0

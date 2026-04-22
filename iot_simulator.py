@@ -6,7 +6,9 @@ import json
 # Configuration
 API_URL = "http://localhost:8000/iot/push"
 API_KEY = "sealant_iot_device_secret_2024"
-IMAGE_FOLDER = "c:/Users/Yousuf Traders/Desktop/fyp/version1/fastapi-backend/saved_images"
+# Use relative path from the simulator script
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+IMAGE_FOLDER = os.path.join(BASE_DIR, "fastapi-backend", "saved_images")
 
 def simulate_iot_push():
     print("--- Sealant IoT Simulator Starting ---")

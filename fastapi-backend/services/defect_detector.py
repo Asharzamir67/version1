@@ -1,88 +1,46 @@
-import os
-import cv2
 import numpy as np
-from pathlib import Path
-
-# Global cache to store the loaded masks dictionary
-_GT_MASKS_CACHE = None
-
-def calculate_iou(mask1, mask2):
-    """Helper to calculate Intersection over Union."""
-    intersection = np.logical_and(mask1, mask2).sum()
-    union = np.logical_or(mask1, mask2).sum()
-    return intersection / union if union > 0 else 0
 
 def detect_defects(result, metadata: str = None, filename: str = None) -> str:
     """
-    Analyze a YOLO result and return defect status based on IoU with Ground Truth.
-    Reads GT masks from a .npy file.
+    Analyze a YOLO result and return defect status based on the area occupied by sealant.
     
     Args:
-        result: YOLO detection result object
-        metadata: Subfolder name (unused for .npy lookup but kept for signature compatibility)
-        filename: Base filename to look for (e.g., "image.jpg")
-    
-    Returns:
-        str: "ok" if IoU > 0.5, "notgood" otherwise
+        result: YOLO detection result object (Ultralytics Results)
+        metadata: Optional metadata string
+        filename: Original filename
     """
-    global _GT_MASKS_CACHE
+    from config import STATUS_OK, STATUS_NG
     
-    if not filename:
-        return "ok"
+    # 1. Check if masks exist in the result
+    if not hasattr(result, 'masks') or result.masks is None:
+        return STATUS_NG
         
-    # 1. Load GT Masks Dictionary (Lazy Loading)
-    if _GT_MASKS_CACHE is None:
-        # Define path to your .npy file
-        # Adjust 'base_dir' resolution if needed to point to where gt_masks.npy is located
-        base_dir = Path(__file__).parent.parent 
-        npy_path = base_dir / "gt_masks.npy"
-        
-        # Fallback absolute path if relative fails (based on your previous context)
-        if not npy_path.exists():
-             npy_path = Path(r"C:\Users\Yousuf Traders\Documents\FYP\gt_masks.npy")
-
-        if npy_path.exists():
-            try:
-                print(f"Loading GT masks from: {npy_path}")
-                _GT_MASKS_CACHE = np.load(str(npy_path), allow_pickle=True).item()
-            except Exception as e:
-                print(f"Error loading .npy file: {e}")
-                return "notgood"
-        else:
-            print(f"Error: gt_masks.npy not found at {npy_path}")
-            return "notgood"
-
-    # 2. Retrieve Specific GT Mask
-    # Ensure filename matches the key in the dictionary exactly
-    if filename not in _GT_MASKS_CACHE:
-        print(f"Warning: GT mask for '{filename}' not found in dictionary.")
-        return "notgood"
-    
-    gt_mask = _GT_MASKS_CACHE[filename]
-    
-    # 3. Process Prediction Mask
-    # gt_mask is (H, W) with values 0 or 1
-    target_shape = gt_mask.shape 
-    
-    if result.masks is None:
-        pred_mask = np.zeros(target_shape, dtype=np.uint8)
-    else:
+    # 2. Extract masks (usually N, H, W)
+    try:
+        # result.masks.data is usually a tensor on GPU/CPU
         masks = result.masks.data.cpu().numpy()
-        if len(masks) == 0:
-            pred_mask = np.zeros(target_shape, dtype=np.uint8)
-        else:
-            # Select the largest mask if multiple detections exist
-            best_idx = np.argmax([m.sum() for m in masks])
-            raw_mask = masks[best_idx]
-            
-            # Resize predicted mask to match GT mask dimensions
-            pred_mask = cv2.resize(raw_mask, (target_shape[1], target_shape[0]))
-            pred_mask = (pred_mask > 0.5).astype(np.uint8)
+    except Exception as e:
+        print(f"Error accessing mask data: {e}")
+        return STATUS_NG
 
-    # 4. Compute IoU and Decision
-    iou = calculate_iou(gt_mask, pred_mask)
-    print(f"Calculated IoU for '{filename}': {iou:.4f}")
-    if iou > 0.4:
-        return "ok"
+    if len(masks) == 0:
+        return STATUS_NG
+
+    # 3. Combine all detected masks into one binary mask to calculate coverage
+    # We use np.any to logical-OR all detected sealant polygons
+    combined_mask = np.any(masks > 0.5, axis=0)
+    
+    # 4. Calculate ratio of occupied pixels to total pixels in the mask grid
+    occupied_pixels = np.sum(combined_mask)
+    total_pixels = combined_mask.size
+    
+    coverage_ratio = occupied_pixels / total_pixels if total_pixels > 0 else 0
+    
+    # 5. Log coverage for debugging (optional context)
+    print(f"Sealant Coverage for '{filename or 'unknown'}': {coverage_ratio*100:.2f}%")
+
+    # 6. Decision: 40% threshold
+    if coverage_ratio >= 0.40:
+        return STATUS_OK
     else:
-        return "notgood"
+        return STATUS_NG

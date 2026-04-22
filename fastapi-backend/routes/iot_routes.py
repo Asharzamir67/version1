@@ -61,9 +61,11 @@ async def iot_push_image(
 
     total_latency = time.time() - start_time
     
+    from config import STATUS_NG
+    
     return {
         "status": "success",
-        "defect_detected": defect_status != "No Defects",
+        "defect_detected": defect_status == STATUS_NG,
         "details": defect_status,
         "latency_ms": int(total_latency * 1000)
     }

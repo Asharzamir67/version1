@@ -29,7 +29,8 @@ def save_to_dataset(image_bytes, result, car_model, filename, class_id=0, test_s
     # 2. Define and Create Directory Structure
     # dataset/{car_model}/{split}/images/
     # dataset/{car_model}/{split}/labels/
-    base_dir = Path("dataset") / car_model / split_dir
+    from config import DATASET_DIR
+    base_dir = DATASET_DIR / car_model / split_dir
     img_dir = base_dir / "images"
     lbl_dir = base_dir / "labels"
     

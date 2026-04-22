@@ -11,8 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from database import SessionLocal
 from models.model_registry import ModelVersion
 
-DEFAULT_MODEL_NAME = "yoloseg_bestwithoutNG.pt"
-AI_MODEL_DIR = Path(__file__).resolve().parent.parent / "ai_model"
+from config import AI_MODEL_DIR, DEFAULT_MODEL_FILENAME
 
 def get_active_model_info_from_db():
     """Retrieves the path and name of the currently active model from the registry."""
@@ -23,7 +22,7 @@ def get_active_model_info_from_db():
             return active_model.model_path, active_model.car_model_name
         
         # Seed logic: If no active model, check if default exists and create a record
-        default_path = str(AI_MODEL_DIR / DEFAULT_MODEL_NAME)
+        default_path = str(AI_MODEL_DIR / DEFAULT_MODEL_FILENAME)
         if os.path.exists(default_path):
             new_version = ModelVersion(
                 car_model_name="All",

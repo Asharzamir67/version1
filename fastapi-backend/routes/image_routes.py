@@ -33,16 +33,21 @@ async def process_images(
     start_read = time.time()
     file_bytes = await asyncio.gather(*[img.read() for img in images])
     read_time = time.time() - start_read
+    
+    timings = {
+        "read_time": round(read_time, 4)
+    }
     print(f"Received {len(file_bytes)} images for processing. Read time: {read_time:.3f}s")
 
     # --- Run YOLO inference (Threaded with Model Pool) ---
     start_inference = time.time()
     results = run_threaded_inference(file_bytes)
     inference_time = time.time() - start_inference
+    timings["inference_time"] = round(inference_time, 4)
     print(f"Threaded Inference completed. Inference time: {inference_time:.3f}s")
 
     # --- Prepare ZIP file in memory ---
-    start_zip = time.time()
+    start_processing = time.time()
     zip_buffer = io.BytesIO()
 
     summary_output = []  # metadata to include in zip
@@ -97,9 +102,15 @@ async def process_images(
             zipf.writestr(f"processed/{filename}", jpeg_bytes)
 
         # Add metadata JSON to the ZIP
+        processing_time = time.time() - start_processing
+        timings["processing_time"] = round(processing_time, 4)
+        total_latency = time.time() - start_read
+        timings["total_latency"] = round(total_latency, 4)
+
         zipf.writestr("results.json", json.dumps({
             "model": model,
             "metadata": metadata,
+            "timings": timings,
             "summary": summary_output
         }, indent=2))
 
@@ -114,9 +125,7 @@ async def process_images(
         original_filenames=[img.filename for img in images]
     )
 
-    zip_time = time.time() - start_zip
-    total_latency = time.time() - start_read
-    print(f"ZIP ready for user. Latency: {total_latency:.3f}s; Offloading recording to background...")
+    print(f"ZIP ready for user. Latency: {total_latency:.3f}s; Timings: {timings}")
 
 
     # Reset stream for sending
@@ -127,6 +136,7 @@ async def process_images(
         zip_buffer,
         media_type="application/zip",
         headers={
-            "Content-Disposition": "attachment; filename=processed_results.zip"
+            "Content-Disposition": "attachment; filename=processed_results.zip",
+            "X-Process-Time": f"{total_latency:.4f}"
         }
     )
