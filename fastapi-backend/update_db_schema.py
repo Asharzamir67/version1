@@ -30,9 +30,9 @@ def update_schema():
         
         if not result:
             conn.execute(text("ALTER TABLE inference_results ADD COLUMN is_test_set BOOLEAN DEFAULT FALSE;"))
-            print("✅ Column 'is_test_set' added.")
+            print("DONE: Column 'is_test_set' added.")
         else:
-            print("ℹ️ Column 'is_test_set' already exists.")
+            print("INFO: Column 'is_test_set' already exists.")
             
         check_query_2 = text("""
             SELECT column_name 
@@ -43,9 +43,9 @@ def update_schema():
         
         if not result_2:
             conn.execute(text("ALTER TABLE inference_results ADD COLUMN dataset_paths TEXT;"))
-            print("✅ Column 'dataset_paths' added.")
+            print("DONE: Column 'dataset_paths' added.")
         else:
-            print("ℹ️ Column 'dataset_paths' already exists.")
+            print("INFO: Column 'dataset_paths' already exists.")
 
 if __name__ == "__main__":
     update_schema()

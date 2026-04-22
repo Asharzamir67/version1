@@ -1,0 +1,130 @@
+.ai-insights-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.ai-insights-container h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.insight-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  border-left: 4px solid #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.insight-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.insight-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.insight-category {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #475569;
+}
+
+.insight-text {
+  margin: 0.5rem 0;
+  line-height: 1.5;
+  color: #334155;
+  font-size: 0.95rem;
+}
+
+.insight-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.severity-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  text-transform: uppercase;
+}
+
+.action-tag {
+  font-size: 0.75rem;
+  background: #f1f5f9;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  color: #475569;
+}
+
+/* Severity Variants */
+.severity-critical {
+  border-left-color: #ef4444;
+  background: #fffafa;
+}
+.severity-critical .severity-label {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.severity-warning {
+  border-left-color: #f59e0b;
+  background: #fffcf5;
+}
+.severity-warning .severity-label {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.severity-info {
+  border-left-color: #3b82f6;
+  background: #f5f9ff;
+}
+.severity-info .severity-label {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.no-insights {
+  padding: 3rem;
+  text-align: center;
+  color: #64748b;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 2px dashed #e2e8f0;
+}
+
+/* Scrollbar Styling */
+.insights-list::-webkit-scrollbar {
+  width: 6px;
+}
+.insights-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.insights-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}

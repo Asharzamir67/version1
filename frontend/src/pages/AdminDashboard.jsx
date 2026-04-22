@@ -4,6 +4,7 @@ import { authAPI } from '../services/api'
 import './AdminDashboard.css'
 import logo from '../components/logo.png'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from '../components/Charts'
+import AIInsights from '../components/AIInsights'
 
 const AdminDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate()
@@ -14,7 +15,8 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [dailyStats, setDailyStats] = useState([])
   const [datasetStats, setDatasetStats] = useState([])
   const [modelRegistry, setModelRegistry] = useState([])
-  const [activeTab, setActiveTab] = useState('analytics') // 'analytics', 'dataset', 'registry'
+  const [systemObservations, setSystemObservations] = useState([])
+  const [activeTab, setActiveTab] = useState('analytics') // 'analytics', 'dataset', 'registry', 'insights'
   const [loadingData, setLoadingData] = useState(true)
   const scrollRef = useRef(null)
 
@@ -75,6 +77,9 @@ const AdminDashboard = ({ user, onLogout }) => {
       } else if (activeTab === 'registry') {
         const res = await authAPI.getModelRegistry()
         setModelRegistry(res.data)
+      } else if (activeTab === 'insights') {
+        const res = await authAPI.getSystemObservations()
+        setSystemObservations(res.data.observations)
       }
     } catch (error) {
       console.error(`Failed to fetch ${activeTab} data:`, error)
@@ -131,6 +136,12 @@ const AdminDashboard = ({ user, onLogout }) => {
                 onClick={() => setActiveTab('registry')}
               >
                 Model Registry
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'insights' ? 'active' : ''}`}
+                onClick={() => setActiveTab('insights')}
+              >
+                AI Insights
               </button>
             </div>
 
@@ -215,6 +226,12 @@ const AdminDashboard = ({ user, onLogout }) => {
                           </tbody>
                         </table>
                       </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'insights' && (
+                    <div className="insights-tab">
+                      <AIInsights observations={systemObservations} />
                     </div>
                   )}
                 </>
