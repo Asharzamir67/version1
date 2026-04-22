@@ -1,0 +1,101 @@
+
+def generate_svg():
+    svg_content = """<svg width="1000" height="850" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="100%" height="100%" fill="#f8f9fa" />
+    
+    <!-- Title -->
+    <text x="500" y="40" font-family="Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#2c3e50">System Architecture: Agentic Supervisor</text>
+
+    <!-- Layer Containers -->
+    <rect x="30" y="80" width="940" height="130" rx="15" fill="#e3f2fd" stroke="#2196f3" stroke-width="1" stroke-dasharray="8,4" />
+    <text x="50" y="105" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#0d47a1">PRESENTATION LAYER</text>
+    
+    <rect x="30" y="240" width="940" height="150" rx="15" fill="#f1f8e9" stroke="#4caf50" stroke-width="1" stroke-dasharray="8,4" />
+    <text x="50" y="265" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1b5e20">API &amp; ORCHESTRATION LAYER</text>
+
+    <rect x="30" y="420" width="940" height="260" rx="15" fill="#fff3e0" stroke="#ff9800" stroke-width="1" stroke-dasharray="8,4" />
+    <text x="50" y="445" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#e65100">INTELLIGENCE LAYER (LangGraph)</text>
+
+    <rect x="30" y="710" width="940" height="110" rx="15" fill="#eceff1" stroke="#607d8b" stroke-width="1" stroke-dasharray="8,4" />
+    <text x="50" y="735" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#263238">DATA &amp; SYSTEM LAYER</text>
+
+    <!-- Components -->
+    <!-- Presentation -->
+    <rect id="dashboard" x="100" y="120" width="220" height="70" rx="8" fill="#fff" stroke="#2196f3" stroke-width="2" />
+    <text x="210" y="155" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">React Admin Dashboard</text>
+    
+    <rect id="insights" x="380" y="120" width="220" height="70" rx="8" fill="#fff" stroke="#2196f3" stroke-width="2" />
+    <text x="490" y="155" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">AI Insights View</text>
+
+    <!-- Backend -->
+    <rect id="fastapi" x="100" y="290" width="220" height="80" rx="8" fill="#fff" stroke="#4caf50" stroke-width="2" />
+    <text x="210" y="335" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">FastAPI Service</text>
+    
+    <rect id="supervisor" x="650" y="290" width="250" height="80" rx="8" fill="#fff" stroke="#4caf50" stroke-width="2" />
+    <text x="775" y="335" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">Background Supervisor</text>
+
+    <!-- Intelligence -->
+    <rect id="stategraph" x="80" y="470" width="260" height="180" rx="8" fill="#fff" stroke="#ff9800" stroke-width="2.5" />
+    <text x="210" y="500" font-family="Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle" fill="#333">StateGraph Orchestrator</text>
+    <line x1="100" y1="515" x2="320" y2="515" stroke="#ff9800" stroke-width="1" />
+    <text x="210" y="545" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#555">- Agent Node (Reasoning)</text>
+    <text x="210" y="575" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#555">- Tools Node (Action)</text>
+    <text x="210" y="605" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#555">- Memory Persistence</text>
+
+    <rect id="tools" x="380" y="470" width="280" height="180" rx="8" fill="#fff" stroke="#ff9800" stroke-width="2" />
+    <text x="520" y="500" font-family="Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle" fill="#333">Tool Registry</text>
+    <line x1="400" y1="515" x2="640" y2="515" stroke="#ff9800" stroke-width="1" />
+    <text x="410" y="540" font-family="Arial, sans-serif" font-size="11" fill="#444">1. audit_system_quality()</text>
+    <text x="410" y="565" font-family="Arial, sans-serif" font-size="11" fill="#444">2. analyze_ng_patterns()</text>
+    <text x="410" y="590" font-family="Arial, sans-serif" font-size="11" fill="#444">3. get_system_error_logs()</text>
+    <text x="410" y="615" font-family="Arial, sans-serif" font-size="11" fill="#444">4. log_system_observation()</text>
+
+    <rect id="llm" x="710" y="470" width="220" height="180" rx="8" fill="#fff" stroke="#ff9800" stroke-width="2" />
+    <text x="820" y="545" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">LLM (Llama 3.1 8B)</text>
+    <text x="820" y="575" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#e65100">Groq Cloud Inference</text>
+
+    <!-- Data -->
+    <rect id="db" x="100" y="740" width="350" height="60" rx="8" fill="#fff" stroke="#607d8b" stroke-width="2" />
+    <text x="275" y="775" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">PostgreSQL Database</text>
+    
+    <rect id="logs" x="530" y="740" width="350" height="60" rx="8" fill="#fff" stroke="#607d8b" stroke-width="2" />
+    <text x="705" y="775" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">System Logs (.txt/.log)</text>
+
+    <!-- ARROWS (ELBOW CONNECTORS) -->
+    <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#444" />
+        </marker>
+    </defs>
+
+    <!-- Frontend to API -->
+    <path d="M 210 190 L 210 290" fill="none" stroke="#2196f3" stroke-width="2" marker-end="url(#arrowhead)" />
+    <rect x="150" y="220" width="120" height="24" rx="5" fill="#fff" stroke="#2196f3" />
+    <text x="210" y="237" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#0d47a1">HTTPS/REST</text>
+
+    <!-- Supervisor to Intelligence -->
+    <path d="M 775 370 L 775 420 L 210 420 L 210 470" fill="none" stroke="#4caf50" stroke-width="2" marker-end="url(#arrowhead)" />
+    <rect x="420" y="408" width="160" height="24" rx="5" fill="#fff" stroke="#4caf50" />
+    <text x="500" y="425" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#1b5e20">Trigger Investigation</text>
+
+    <!-- Orchestrator to LLM (Routing AROUND Tools) -->
+    <path d="M 340 560 L 360 560 L 360 670 L 820 670 L 820 650" fill="none" stroke="#ff9800" stroke-width="2" marker-end="url(#arrowhead)" />
+    <rect x="520" y="658" width="120" height="24" rx="5" fill="#fff" stroke="#ff9800" />
+    <text x="580" y="675" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#e65100">Context/Prompt</text>
+
+    <!-- Tool Registry to Data -->
+    <path d="M 520 650 L 520 700 L 275 700 L 275 740" fill="none" stroke="#ff9800" stroke-width="2" marker-end="url(#arrowhead)" />
+    <text x="380" y="695" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#e65100">SQL Alchemy</text>
+
+    <path d="M 600 650 L 600 700 L 705 700 L 705 740" fill="none" stroke="#ff9800" stroke-width="2" marker-end="url(#arrowhead)" />
+    <text x="650" y="695" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#e65100">File I/O Stream</text>
+
+    </svg>"""
+    
+    with open("system_architecture.svg", "w") as f:
+        f.write(svg_content)
+    print("Professional Elbow-Routed SE architecture diagram generated.")
+
+if __name__ == "__main__":
+    generate_svg()

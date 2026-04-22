@@ -1,0 +1,4 @@
+2026-04-20 22:09:43,403 - ERROR - [HARDWARE] Emergency: Camera 4 has suffered a catastrophic failure. Immediate replacement required.
+2026-04-20 22:12:43,968 - ERROR - [HARDWARE] UNIT TEST: Total power failure on Node 5. Alerting systems should trigger.
+2026-04-20 22:13:27,075 - ERROR - [HARDWARE] UNIT TEST: Total power failure on Node 5. Alerting systems should trigger.
+2026-04-20 22:33:42,336 - ERROR - [MODEL_DRIFT/HARDWARE/DATASET] Camera 1 is responsible for over 50% of the defects

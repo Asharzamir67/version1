@@ -92,6 +92,7 @@ export const authAPI = {
   getDailyStats: () => api.get('/admin/daily-stats'),
   getDatasetStats: () => api.get('/admin/dataset-stats'),
   getModelRegistry: () => api.get('/admin/model-registry'),
+  getSystemObservations: (limit = 50, offset = 0) => api.get(`/api/system-observations?limit=${limit}&offset=${offset}`),
   openImagesFolder: () => api.post('/admin/open-images-folder'),
 };
 

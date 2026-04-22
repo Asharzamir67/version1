@@ -18,3 +18,13 @@ class ModelVersion(Base):
     
     is_active = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class SystemObservation(Base):
+    __tablename__ = "system_observations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    severity = Column(String) # 'INFO', 'WARNING', 'CRITICAL'
+    category = Column(String) # 'MODEL_DRIFT', 'HARDWARE', 'DATASET'
+    observation = Column(String)
+    action_taken = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

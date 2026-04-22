@@ -17,4 +17,11 @@ SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_P
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 #pip install fastapi==0.114.0 uvicorn[standard]==0.23.2 python-multipart==0.0.6 passlib==1.7.4 pydantic==1.10.12 sqlalchemy==1.4.41 databases==0.6.2 psycopg2-binary==2.9.7 python-jose==3.3.0 python-dotenv==1.0.0
