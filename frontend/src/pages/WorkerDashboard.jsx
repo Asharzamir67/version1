@@ -32,7 +32,7 @@ function WorkerDashboard({ user, onLogout }) {
   const [cameraStatuses, setCameraStatuses] = useState({
     frontend1: 'good',
     frontend2: 'good',
-    backend1: 'ng',
+    backend1: 'notgood',
     backend2: 'good'
   })
 
@@ -46,12 +46,14 @@ function WorkerDashboard({ user, onLogout }) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [processingModalOpen, setProcessingModalOpen] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState([])
-  const [selectedModel, setSelectedModel] = useState('default')
-  const [metadataText, setMetadataText] = useState('default')
+  const [selectedModel, setSelectedModel] = useState('')
+  const [metadataText, setMetadataText] = useState('')
   const [processing, setProcessing] = useState(false)
   const [processResult, setProcessResult] = useState(null)
   const [capturedImages, setCapturedImages] = useState([])
   const [captureModalOpen, setCaptureModalOpen] = useState(false)
+  const [countdown, setCountdown] = useState(null)
+  const timerRef = useRef(null)
 
   // Refs for camera video elements
   const frontend1Ref = useRef(null)
@@ -59,6 +61,8 @@ function WorkerDashboard({ user, onLogout }) {
   const backend1Ref = useRef(null)
   const backend2Ref = useRef(null)
   const metadataInputRef = useRef(null)
+  const streamsRef = useRef({})
+
 
   // Helper functions for Electron / Web compatibility
   const getMedia = async (constraints) => {
@@ -117,14 +121,21 @@ function WorkerDashboard({ user, onLogout }) {
       }
 
       setCameraStreams(streams)
+      streamsRef.current = streams
     }
 
     initCameras()
 
     return () => {
-      Object.values(cameraStreams).forEach(stream => {
-        if (stream) stream.getTracks().forEach(track => track.stop())
-      })
+      // Use ref to ensure current active streams are stopped
+      Object.values(streamsRef.current).forEach(stream => {
+        if (stream) {
+          stream.getTracks().forEach(track => {
+            track.stop();
+          });
+        }
+      });
+      streamsRef.current = {};
     }
   }, [])
 
@@ -135,7 +146,7 @@ function WorkerDashboard({ user, onLogout }) {
         const newStatus = { ...prev }
         const cams = ['frontend1', 'frontend2', 'backend1', 'backend2']
         const randomCam = cams[Math.floor(Math.random() * cams.length)]
-        newStatus[randomCam] = Math.random() > 0.5 ? 'good' : 'ng'
+        newStatus[randomCam] = Math.random() > 0.5 ? 'good' : 'notgood'
         return newStatus
       })
     }, 5000)
@@ -149,6 +160,56 @@ function WorkerDashboard({ user, onLogout }) {
       metadataInputRef.current.focus()
     }
   }, [])
+
+  // Auto-trigger logic
+  useEffect(() => {
+    if (metadataText.length > 10 && !processing && !countdown) {
+      setCountdown(5)
+    } else if (metadataText.length <= 10 && countdown) {
+      setCountdown(null)
+    }
+  }, [metadataText, processing])
+
+  // Timer countdown behavior
+  useEffect(() => {
+    if (countdown === null) {
+      if (timerRef.current) clearInterval(timerRef.current)
+      return
+    }
+
+    if (countdown === 0) {
+      handleAutoTrigger()
+      return
+    }
+
+    timerRef.current = setInterval(() => {
+      setCountdown(prev => (prev > 0 ? prev - 1 : 0))
+    }, 1000)
+
+    return () => clearInterval(timerRef.current)
+  }, [countdown])
+
+  const handleAutoTrigger = async () => {
+    setCountdown(null)
+
+    // Capture images automatically
+    const cameraRefs = {
+      frontend1: frontend1Ref,
+      frontend2: frontend2Ref,
+      backend1: backend1Ref,
+      backend2: backend2Ref
+    }
+
+    const captured = []
+    for (const [cameraId, ref] of Object.entries(cameraRefs)) {
+      const videoElement = ref.current
+      const image = await captureVideoFrame(videoElement, cameraId)
+      captured.push(image)
+    }
+
+    await executeInference(captured, metadataText, metadataText)
+    setMetadataText('') // Clear completely as requested
+  }
 
   const handleLogout = () => setShowLogoutConfirm(true)
   const confirmLogout = () => {
@@ -237,18 +298,82 @@ function WorkerDashboard({ user, onLogout }) {
     setCaptureModalOpen(true)
   }
 
-  // Process captured images
-  const handleProcessCaptured = async () => {
-    if (capturedImages.length !== 4) {
-      alert('Expected 4 captured images')
+  // Core Inference Logic
+  const executeInference = async (files, model, metadata) => {
+    if (files.length !== 4) {
+      alert('Please select exactly 4 images')
       return
     }
 
+    setProcessing(true)
+    setProcessResult(null)
+
+    try {
+      const response = await imageAPI.processImages(files, model, metadata)
+
+      const zip = new JSZip();
+      const unzipped = await zip.loadAsync(response.data);
+      const resultsJson = await unzipped.file("results.json").async("string");
+      const results = JSON.parse(resultsJson);
+
+      const processedImages = [];
+      for (const item of results.summary) {
+        const filename = item.filename;
+        const imgFile = unzipped.file(`processed/${filename}`);
+        if (imgFile) {
+          const imgBlob = await imgFile.async("blob");
+          const base64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.readAsDataURL(imgBlob);
+          });
+
+          processedImages.push({
+            filename: filename,
+            visualized: base64,
+            predictions: {},
+            defect: item.defect
+          });
+        }
+      }
+
+      const overallStatus = processedImages.some(img => img.defect === 'notgood') ? 'notgood' : 'good';
+
+      const finalResult = {
+        status: overallStatus,
+        model: results.model,
+        images: processedImages
+      };
+
+      setProcessResult(finalResult)
+
+      if (finalResult.status === 'notgood') {
+        setCameraStatuses(prev => ({ ...prev, frontend1: 'notgood', frontend2: 'notgood', backend1: 'notgood', backend2: 'notgood' }))
+      } else {
+        setCameraStatuses(prev => ({ ...prev, frontend1: 'good', frontend2: 'good', backend1: 'good', backend2: 'good' }))
+      }
+
+      setProcessingModalOpen(false);
+      setTimeout(() => {
+        navigate('/processing-results', {
+          state: { result: finalResult }
+        });
+      }, 100);
+    } catch (err) {
+      const errorMessage = err.response?.data?.detail || err.message || 'Processing failed'
+      alert('Processing error: ' + errorMessage)
+    } finally {
+      setProcessing(false)
+      setProcessingModalOpen(false)
+    }
+  }
+
+  // Process captured images (manual)
+  const handleProcessCaptured = async () => {
     setCaptureModalOpen(false)
     setProcessingModalOpen(true)
     setSelectedFiles(capturedImages)
-    setSelectedModel('default')
-    setMetadataText('default')
+    setSelectedModel('')
   }
 
   if (!user || user.role !== 'worker') return null
@@ -281,10 +406,21 @@ function WorkerDashboard({ user, onLogout }) {
                 padding: '6px 12px',
                 fontSize: '16px',
                 borderRadius: '4px',
-                border: '1px solid #2196F3',
-                textAlign: 'center'
+                border: countdown ? '2px solid #FF9800' : '1px solid #2196F3',
+                textAlign: 'center',
+                transition: 'border 0.3s ease'
               }}
             />
+            {countdown !== null && (
+              <span style={{
+                fontSize: '12px',
+                color: '#FF9800',
+                fontWeight: 'bold',
+                animation: 'pulse 1s infinite'
+              }}>
+                Auto-starting in {countdown}s...
+              </span>
+            )}
           </div>
 
           <button className="login-button" style={{ padding: '6px 16px', fontSize: '14px', whiteSpace: 'nowrap' }} onClick={() => setProcessingModalOpen(true)}>Process</button>
@@ -349,7 +485,7 @@ function WorkerDashboard({ user, onLogout }) {
             <div className="summary-item">
               <span>NG:</span>
               <span className="summary-value ng">
-                {Object.values(cameraStatuses).filter(s => s === 'ng').length}
+                {Object.values(cameraStatuses).filter(s => s === 'notgood').length}
               </span>
             </div>
           </div>
@@ -374,73 +510,8 @@ function WorkerDashboard({ user, onLogout }) {
           <div className="modal-card">
             <h3>Process Images</h3>
             <form onSubmit={async (e) => {
-              e.preventDefault()
-              if (selectedFiles.length !== 4) {
-                alert('Please select exactly 4 images')
-                return
-              }
-
-              setProcessing(true)
-              setProcessResult(null)
-
-              try {
-                const response = await imageAPI.processImages(selectedFiles, selectedModel, metadataText)
-
-                const zip = new JSZip();
-                const unzipped = await zip.loadAsync(response.data);
-                const resultsJson = await unzipped.file("results.json").async("string");
-                const results = JSON.parse(resultsJson);
-
-                const processedImages = [];
-                for (const item of results.summary) {
-                  const filename = item.filename;
-                  const imgFile = unzipped.file(`processed/${filename}`);
-                  if (imgFile) {
-                    const imgBlob = await imgFile.async("blob");
-                    const base64 = await new Promise((resolve) => {
-                      const reader = new FileReader();
-                      reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                      reader.readAsDataURL(imgBlob);
-                    });
-
-                    processedImages.push({
-                      filename: filename,
-                      visualized: base64,
-                      predictions: {},
-                      defect: item.defect
-                    });
-                  }
-                }
-
-                const overallStatus = processedImages.some(img => img.defect === 'notgood') ? 'notgood' : 'good';
-
-                const finalResult = {
-                  status: overallStatus,
-                  model: results.model,
-                  images: processedImages
-                };
-
-                setProcessResult(finalResult)
-
-                if (finalResult.status === 'notgood') {
-                  setCameraStatuses(prev => ({ ...prev, frontend1: 'ng', frontend2: 'ng', backend1: 'ng', backend2: 'ng' }))
-                } else {
-                  setCameraStatuses(prev => ({ ...prev, frontend1: 'good', frontend2: 'good', backend1: 'good', backend2: 'good' }))
-                }
-
-                setProcessingModalOpen(false);
-                setTimeout(() => {
-                  navigate('/processing-results', {
-                    state: { result: finalResult }
-                  });
-                }, 100);
-              } catch (err) {
-                const errorMessage = err.response?.data?.detail || err.message || 'Processing failed'
-                alert('Processing error: ' + errorMessage)
-              } finally {
-                setProcessing(false)
-                setProcessingModalOpen(false)
-              }
+              e.preventDefault();
+              await executeInference(selectedFiles, selectedModel || metadataText, metadataText);
             }}>
               <div style={{ marginBottom: 8 }}>
                 <label>Model</label>

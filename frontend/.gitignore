@@ -75,3 +75,7 @@ coverage/
 *.temp
 .cache/
 .temp/
+
+#folders
+version1\fastapi-backend\saved_images
+version1\frontend\node_modules

@@ -1,44 +1,50 @@
-# main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-# Import all your routers
-from routes import user_routes, admin_routes, image_routes
 from database import Base, engine
 from models.inference_result import InferenceResult
+from routes import user_routes, admin_routes, image_routes, iot_routes
+from contextlib import asynccontextmanager
+from config import ensure_directories
 
 # -------------------- Create Tables --------------------
-# This will create all tables in your RDS/Postgres database if they don't exist
 Base.metadata.create_all(bind=engine)
 
+# -------------------- Infrastructure Setup --------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup tasks
+    ensure_directories()
+    yield
+    # Shutdown tasks (if any)
+
 app = FastAPI(
-    title="FastAPI MVC Auth & Image Processing",
-    description="Backend API with JWT auth, user/admin separation, and image processing",
-    version="1.0.0"
+    title="Sealant Monitoring Backend",
+    description="Backend API with PWA support, IoT hooks, and background task offloading.",
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # -------------------- CORS Setup --------------------
 origins = [
-    "http://localhost:3000",  # your frontend URL
+    "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "*"  # optional, allow all origins
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
-
-from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*", "null"],
+    allow_origins=origins + ["null"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
 # -------------------- Include Routers --------------------
 app.include_router(user_routes.router)
 app.include_router(admin_routes.router)
 app.include_router(image_routes.router)
+app.include_router(iot_routes.router)
 
 # -------------------- Root --------------------
 @app.get("/", summary="Root Endpoint")

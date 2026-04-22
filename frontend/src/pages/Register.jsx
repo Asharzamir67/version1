@@ -74,12 +74,12 @@ function Register() {
           </div>
 
           <div className="form-group">
-            <label>Username</label>
-            <input name="username" value={form.username} onChange={handleChange} required />
+            <label htmlFor="reg-username">Username</label>
+            <input id="reg-username" name="username" value={form.username} onChange={handleChange} required />
           </div>
           <div className="form-group">
-            <label>Password</label>
-            <input name="password" type="password" value={form.password} onChange={handleChange} required />
+            <label htmlFor="reg-password">Password</label>
+            <input id="reg-password" name="password" type="password" value={form.password} onChange={handleChange} required />
           </div>
           <button className="login-button" disabled={loading}>{loading ? 'Creating…' : 'Register'}</button>
           {error && <div className="login-error" role="alert">{error}</div>}

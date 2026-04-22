@@ -1,21 +1,17 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from typing import List
-from utils.dependencies import get_current_user
-from services.inference import run_batch_inference, run_threaded_inference
+from utils.dependencies import get_current_user, get_db
+from services.inference import run_threaded_inference
 from services.defect_detector import detect_defects
+from services.record_service import record_inference_task
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from utils.dependencies import get_db
-from models.inference_result import InferenceResult
 import asyncio
 import cv2
 import json
 import io
-import os
 import zipfile
 import time
-from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 router = APIRouter(prefix="/images", tags=["Images"])
@@ -23,6 +19,7 @@ router = APIRouter(prefix="/images", tags=["Images"])
 
 @router.post("/process", summary="Upload 4 images and receive a zipped result package")
 async def process_images(
+    background_tasks: BackgroundTasks,
     images: List[UploadFile] = File(..., description="Upload 4 images"),
     model: str = Form(...),
     metadata: str = Form(...),
@@ -36,16 +33,21 @@ async def process_images(
     start_read = time.time()
     file_bytes = await asyncio.gather(*[img.read() for img in images])
     read_time = time.time() - start_read
+    
+    timings = {
+        "read_time": round(read_time, 4)
+    }
     print(f"Received {len(file_bytes)} images for processing. Read time: {read_time:.3f}s")
 
     # --- Run YOLO inference (Threaded with Model Pool) ---
     start_inference = time.time()
     results = run_threaded_inference(file_bytes)
     inference_time = time.time() - start_inference
+    timings["inference_time"] = round(inference_time, 4)
     print(f"Threaded Inference completed. Inference time: {inference_time:.3f}s")
 
     # --- Prepare ZIP file in memory ---
-    start_zip = time.time()
+    start_processing = time.time()
     zip_buffer = io.BytesIO()
 
     summary_output = []  # metadata to include in zip
@@ -92,7 +94,7 @@ async def process_images(
 
             summary_output.append({
                 "filename": filename,
-                #"predictions": results[idx].to_json(),
+                "predictions": json.loads(results[idx].to_json()),
                 "defect": defect_status
             })
 
@@ -100,42 +102,30 @@ async def process_images(
             zipf.writestr(f"processed/{filename}", jpeg_bytes)
 
         # Add metadata JSON to the ZIP
+        processing_time = time.time() - start_processing
+        timings["processing_time"] = round(processing_time, 4)
+        total_latency = time.time() - start_read
+        timings["total_latency"] = round(total_latency, 4)
+
         zipf.writestr("results.json", json.dumps({
             "model": model,
             "metadata": metadata,
+            "timings": timings,
             "summary": summary_output
         }, indent=2))
 
-    # --- Save images and record result to DB ---
-    save_dir = "saved_images"
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    folder_name = f"{timestamp}_{model}"
-    full_save_path = os.path.join(save_dir, folder_name)
-    os.makedirs(full_save_path)
-
-    for filename, jpeg_bytes in rendered_images:
-        img_path = os.path.join(full_save_path, filename)
-        with open(img_path, "wb") as f:
-            f.write(jpeg_bytes)
-
-    # Record in Database
-    new_result = InferenceResult(
-        car_model=model,
-        image1_status=defect_statuses[0],
-        image2_status=defect_statuses[1],
-        image3_status=defect_statuses[2],
-        image4_status=defect_statuses[3]
+    # --- Offload Slow Operations to Background (Disk, DB, Dataset) ---
+    background_tasks.add_task(
+        record_inference_task,
+        rendered_images=rendered_images,
+        file_bytes=file_bytes,
+        results=results,
+        model=model,
+        defect_statuses=defect_statuses,
+        original_filenames=[img.filename for img in images]
     )
-    db.add(new_result)
-    db.commit()
-    db.refresh(new_result)
 
-    zip_time = time.time() - start_zip
-    total_time = time.time() - start_read
-    print(f"ZIP created. Zip+write time: {zip_time:.3f}s; total request time: {total_time:.3f}s")
+    print(f"ZIP ready for user. Latency: {total_latency:.3f}s; Timings: {timings}")
 
 
     # Reset stream for sending
@@ -146,6 +136,7 @@ async def process_images(
         zip_buffer,
         media_type="application/zip",
         headers={
-            "Content-Disposition": "attachment; filename=processed_results.zip"
+            "Content-Disposition": "attachment; filename=processed_results.zip",
+            "X-Process-Time": f"{total_latency:.4f}"
         }
     )

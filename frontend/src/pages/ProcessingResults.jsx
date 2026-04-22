@@ -1,9 +1,12 @@
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import CanvasOverlay from '../components/CanvasOverlay';
 import './ProcessingResults.css';
 
 function ProcessingResults() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [showOverlays, setShowOverlays] = useState(true);
   const result = location.state?.result;
 
   if (!result) {
@@ -28,6 +31,15 @@ function ProcessingResults() {
       <div className="results-header">
         <h1>Processing Results</h1>
         <div className="results-actions-header">
+          <label className="toggle-container" style={{ display: 'flex', alignItems: 'center', marginRight: '16px', color: '#94a3b8', fontSize: '13px', cursor: 'pointer' }}>
+             <input 
+               type="checkbox" 
+               checked={showOverlays} 
+               onChange={() => setShowOverlays(!showOverlays)}
+               style={{ marginRight: '6px' }}
+             />
+             Show AI Overlays
+          </label>
           <span style={{ color: '#cbd5e1', fontSize: '13px', marginRight: '8px' }}>
             Batch Status: <strong className={`summary-status ${overallStatusClass}`}>{overallStatusText}</strong>
           </span>
@@ -37,22 +49,29 @@ function ProcessingResults() {
 
       <div className="results-grid">
         {result.images && result.images.map((imageData, index) => {
-          const predictions = typeof imageData.predictions === 'string'
-            ? JSON.parse(imageData.predictions)
-            : imageData.predictions;
-
-          const hasDefects = imageData.defect === 'notgood'; // Simplified for display
+          const predictions = imageData.predictions;
+          const hasDefects = imageData.defect === 'notgood';
+          const overlayColor = hasDefects ? '#F44336' : '#4CAF50';
 
           return (
             <div key={index} className="result-card">
-              {/* Image */}
-              <div className="result-image-container">
+              {/* Image & Canvas Overlays */}
+              <div className="result-image-container" style={{ position: 'relative' }}>
                 {imageData.visualized ? (
-                  <img
-                    src={`data:image/png;base64,${imageData.visualized}`}
-                    alt={`Result ${index + 1}`}
-                    className="result-image"
-                  />
+                  <>
+                    <img
+                      src={`data:image/png;base64,${imageData.visualized}`}
+                      alt={`Result ${index + 1}`}
+                      className="result-image"
+                      id={`img-result-${index}`}
+                    />
+                    {showOverlays && (
+                      <CanvasOverlay 
+                        predictions={predictions} 
+                        color={overlayColor}
+                      />
+                    )}
+                  </>
                 ) : (
                   <div className="no-image">No Image</div>
                 )}
@@ -66,9 +85,9 @@ function ProcessingResults() {
                 </div>
               </div>
 
-              {/* Overlay Bottom: Detections (optional, keeping minimal) */}
+              {/* Overlay Bottom: Detections */}
               <div className="predictions-overlay">
-                Detections: {predictions?.boxes?.length || 0}
+                Detections: {predictions?.length || 0}
               </div>
             </div>
           );

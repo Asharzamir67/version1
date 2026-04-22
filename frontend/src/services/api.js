@@ -10,14 +10,19 @@ const getApiBaseUrl = () => {
   const isLocalhost = typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-  // For localhost dev, use proxy (vite will proxy to backend)
+  // Use environment variable if provided (for prod/dev docker)
+  const envBaseUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envBaseUrl) {
+    return envBaseUrl;
+  }
+
+  // For localhost dev without env var, use proxy
   if (isLocalhost) {
     return ''; // Empty string means use relative URLs (vite proxy will handle it)
   }
 
-  // For Electron or production, use full backend URL
-  // Change this to your backend URL
-  return 'http://localhost:8000'; // FastAPI default port
+  // For Electron or production, use fallback
+  return 'http://localhost:8000';
 };
 
 // Create axios instance
@@ -56,7 +61,14 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Unauthorized - clear user data and redirect to login
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      
+      // If we are using hash router, we need to prefix with #
+      const isHashRouter = window.location.hash || window.location.protocol === 'file:';
+      const loginPath = isHashRouter ? '#/login' : '/login';
+      
+      if (!window.location.href.includes('/login')) {
+        window.location.href = loginPath;
+      }
     }
     return Promise.reject(error);
   }
@@ -76,8 +88,10 @@ export const authAPI = {
   getUsers: () => api.get('/admin/users'),
   updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
-  getModelStatus: (prompt) => api.get('/admin/model-status', { params: prompt ? { prompt } : {} }),
+  getModelStatus: (prompt, history = []) => api.post('/admin/model-status', { prompt, history }),
   getDailyStats: () => api.get('/admin/daily-stats'),
+  getDatasetStats: () => api.get('/admin/dataset-stats'),
+  getModelRegistry: () => api.get('/admin/model-registry'),
   openImagesFolder: () => api.post('/admin/open-images-folder'),
 };
 

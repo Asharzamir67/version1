@@ -21,4 +21,4 @@ def process_images_controller(files: List[UploadFile]):
             content = f.file.read()
             encoded = base64.b64encode(content).decode("utf-8")
             processed_images_base64.append({"filename": f.filename, "data": encoded})
-        return {"result": "notgood", "images": processed_images_base64}
+        return {"result": "ng", "images": processed_images_base64}
