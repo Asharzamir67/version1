@@ -15,3 +15,4 @@ image_check.http
 test_agent.py
 /saved_images
 /dataset
+.docker.env

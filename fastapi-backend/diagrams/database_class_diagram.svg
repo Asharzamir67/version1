@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" style="background-color: white; font-family: sans-serif;">
+  <defs>
+    <style>
+      .class-box { fill: #f9f9f9; stroke: #333; stroke-width: 2; }
+      .class-header { fill: #e0e0e0; stroke: #333; stroke-width: 2; }
+      .text-header { font-weight: bold; font-size: 16px; }
+      .text-field { font-size: 14px; fill: #333; }
+      .line { stroke: #333; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <!-- InferenceResult -->
+  <g transform="translate(50, 50)">
+    <rect class="class-box" width="260" height="230" rx="5" ry="5"/>
+    <rect class="class-header" width="260" height="30" rx="5" ry="5"/>
+    <rect fill="#e0e0e0" width="260" height="15" y="15"/>
+    <text class="text-header" x="130" y="20" text-anchor="middle">InferenceResult</text>
+    <line class="line" x1="0" y1="30" x2="260" y2="30"/>
+    <text class="text-field" x="10" y="50">+ id: Integer</text>
+    <text class="text-field" x="10" y="70">+ input_time: DateTime</text>
+    <text class="text-field" x="10" y="90">+ car_model: String</text>
+    <text class="text-field" x="10" y="110">+ image1_status: String</text>
+    <text class="text-field" x="10" y="130">+ image2_status: String</text>
+    <text class="text-field" x="10" y="150">+ image3_status: String</text>
+    <text class="text-field" x="10" y="170">+ image4_status: String</text>
+    <text class="text-field" x="10" y="190">+ is_test_set: Boolean</text>
+    <text class="text-field" x="10" y="210">+ dataset_paths: String</text>
+  </g>
+
+  <!-- ModelVersion -->
+  <g transform="translate(350, 50)">
+    <rect class="class-box" width="260" height="250" rx="5" ry="5"/>
+    <rect class="class-header" width="260" height="30" rx="5" ry="5"/>
+    <rect fill="#e0e0e0" width="260" height="15" y="15"/>
+    <text class="text-header" x="130" y="20" text-anchor="middle">ModelVersion</text>
+    <line class="line" x1="0" y1="30" x2="260" y2="30"/>
+    <text class="text-field" x="10" y="50">+ id: Integer</text>
+    <text class="text-field" x="10" y="70">+ car_model_name: String</text>
+    <text class="text-field" x="10" y="90">+ version_number: Integer</text>
+    <text class="text-field" x="10" y="110">+ model_path: String</text>
+    <text class="text-field" x="10" y="130">+ map_50: Float</text>
+    <text class="text-field" x="10" y="150">+ map_50_95: Float</text>
+    <text class="text-field" x="10" y="170">+ precision: Float</text>
+    <text class="text-field" x="10" y="190">+ recall: Float</text>
+    <text class="text-field" x="10" y="210">+ is_active: Boolean</text>
+    <text class="text-field" x="10" y="230">+ created_at: DateTime</text>
+  </g>
+
+  <!-- SystemObservation -->
+  <g transform="translate(650, 50)">
+    <rect class="class-box" width="260" height="170" rx="5" ry="5"/>
+    <rect class="class-header" width="260" height="30" rx="5" ry="5"/>
+    <rect fill="#e0e0e0" width="260" height="15" y="15"/>
+    <text class="text-header" x="130" y="20" text-anchor="middle">SystemObservation</text>
+    <line class="line" x1="0" y1="30" x2="260" y2="30"/>
+    <text class="text-field" x="10" y="50">+ id: Integer</text>
+    <text class="text-field" x="10" y="70">+ severity: String</text>
+    <text class="text-field" x="10" y="90">+ category: String</text>
+    <text class="text-field" x="10" y="110">+ observation: String</text>
+    <text class="text-field" x="10" y="130">+ action_taken: String</text>
+    <text class="text-field" x="10" y="150">+ created_at: DateTime</text>
+  </g>
+
+  <!-- Admin -->
+  <g transform="translate(50, 350)">
+    <rect class="class-box" width="260" height="110" rx="5" ry="5"/>
+    <rect class="class-header" width="260" height="30" rx="5" ry="5"/>
+    <rect fill="#e0e0e0" width="260" height="15" y="15"/>
+    <text class="text-header" x="130" y="20" text-anchor="middle">Admin</text>
+    <line class="line" x1="0" y1="30" x2="260" y2="30"/>
+    <text class="text-field" x="10" y="50">+ id: Integer</text>
+    <text class="text-field" x="10" y="70">+ username: String</text>
+    <text class="text-field" x="10" y="90">+ password: String</text>
+  </g>
+
+  <!-- User -->
+  <g transform="translate(350, 350)">
+    <rect class="class-box" width="260" height="110" rx="5" ry="5"/>
+    <rect class="class-header" width="260" height="30" rx="5" ry="5"/>
+    <rect fill="#e0e0e0" width="260" height="15" y="15"/>
+    <text class="text-header" x="130" y="20" text-anchor="middle">User</text>
+    <line class="line" x1="0" y1="30" x2="260" y2="30"/>
+    <text class="text-field" x="10" y="50">+ id: Integer</text>
+    <text class="text-field" x="10" y="70">+ username: String</text>
+    <text class="text-field" x="10" y="90">+ password: String</text>
+  </g>
+
+  <!-- ChatMessage -->
+  <g transform="translate(650, 350)">
+    <rect class="class-box" width="260" height="150" rx="5" ry="5"/>
+    <rect class="class-header" width="260" height="30" rx="5" ry="5"/>
+    <rect fill="#e0e0e0" width="260" height="15" y="15"/>
+    <text class="text-header" x="130" y="20" text-anchor="middle">ChatMessage</text>
+    <line class="line" x1="0" y1="30" x2="260" y2="30"/>
+    <text class="text-field" x="10" y="50">+ id: Integer</text>
+    <text class="text-field" x="10" y="70">+ thread_id: String</text>
+    <text class="text-field" x="10" y="90">+ role: String</text>
+    <text class="text-field" x="10" y="110">+ content: String</text>
+    <text class="text-field" x="10" y="130">+ created_at: DateTime</text>
+  </g>
+
+</svg>

@@ -2,7 +2,7 @@ fastapi==0.114.0
 uvicorn[standard]==0.23.2
 python-multipart==0.0.6
 passlib==1.7.4
-pydantic>=2.10.6
+pydantic
 sqlalchemy==1.4.41
 databases==0.6.2
 psycopg2-binary==2.9.7
@@ -13,5 +13,8 @@ bcrypt==4.1.2
 ultralytics
 langgraph
 langchain
-langchain-openai
+langchain-core
+langchain-community
 langchain-groq
+requests
+watchfiles

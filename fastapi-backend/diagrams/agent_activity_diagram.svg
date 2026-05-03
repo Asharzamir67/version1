@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1050" style="background-color: white; font-family: sans-serif; font-size: 14px;">
+  <defs>
+    <style>
+      .activity { fill: #e3f2fd; stroke: #1976d2; stroke-width: 2; rx: 8; ry: 8; }
+      .agent-node { fill: #e8f5e9; stroke: #388e3c; stroke-width: 2; rx: 15; ry: 15; }
+      .tools-node { fill: #fff3e0; stroke: #f57c00; stroke-width: 2; rx: 8; ry: 8; }
+      .decision { fill: #f3e5f5; stroke: #8e24aa; stroke-width: 2; }
+      .arrow { stroke: #333; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .text { fill: #333; text-anchor: middle; font-weight: bold; }
+      .text-small { fill: #444; font-size: 12px; }
+      .graph-bound { stroke: #999; stroke-width: 2; stroke-dasharray: 8,4; fill: none; rx: 10; ry: 10; }
+      .graph-label { fill: #777; font-weight: bold; font-size: 16px; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+
+  <!-- Start -->
+  <circle cx="400" cy="30" r="15" fill="#333" />
+  <line x1="400" y1="45" x2="400" y2="80" class="arrow" />
+
+  <!-- Save User Msg -->
+  <rect x="250" y="80" width="300" height="40" class="activity" />
+  <text x="400" y="105" class="text">Save User Prompt to Database</text>
+  <line x1="400" y1="120" x2="400" y2="160" class="arrow" />
+
+  <!-- Load History -->
+  <rect x="250" y="160" width="300" height="40" class="activity" />
+  <text x="400" y="185" class="text">Load Past 10 Thread Messages</text>
+  <line x1="400" y1="200" x2="400" y2="240" class="arrow" />
+
+  <!-- Construct Context -->
+  <rect x="200" y="240" width="400" height="40" class="activity" />
+  <text x="400" y="265" class="text">Construct Messages (System Prompt + History)</text>
+  <line x1="400" y1="280" x2="400" y2="330" class="arrow" />
+
+  <!-- LangGraph Boundary -->
+  <rect x="100" y="300" width="750" height="420" class="graph-bound" />
+  <text x="120" y="325" class="graph-label">LangGraph Workflow (AgentManager)</text>
+
+  <!-- Node: Agent -->
+  <rect x="250" y="330" width="300" height="60" class="agent-node" />
+  <text x="400" y="355" class="text">NODE: agent</text>
+  <text x="400" y="375" class="text-small">Invoke ChatGroq LLM</text>
+  <line x1="400" y1="390" x2="400" y2="430" class="arrow" />
+
+  <!-- Decision: should_continue -->
+  <polygon points="400,430 480,470 400,510 320,470" class="decision" />
+  <text x="400" y="475" class="text">Tool Calls?</text>
+
+  <!-- Yes branch -->
+  <path d="M 480 470 L 660 470 L 660 485" class="arrow" />
+  <text x="560" y="460" class="text-small">Yes ("tools")</text>
+
+  <!-- Node: Tools -->
+  <rect x="520" y="490" width="280" height="200" class="tools-node" />
+  <text x="660" y="515" class="text">NODE: tools</text>
+  <text x="540" y="540" class="text-small" text-anchor="start">- get_system_stats()</text>
+  <text x="540" y="560" class="text-small" text-anchor="start">- get_active_model_info()</text>
+  <text x="540" y="580" class="text-small" text-anchor="start">- analyze_ng_patterns()</text>
+  <text x="540" y="600" class="text-small" text-anchor="start">- start_model_retraining()</text>
+  <text x="540" y="620" class="text-small" text-anchor="start">- get_quality_analytics()</text>
+  <text x="540" y="640" class="text-small" text-anchor="start">- audit_system_quality()</text>
+  <text x="540" y="660" class="text-small" text-anchor="start">- ... (Execute &amp; Return ToolMessage)</text>
+
+  <!-- Loop back arrow -->
+  <!-- Starts at 520, 590, goes to 150, 590, up to 150, 360, right to 250, 360 -->
+  <path d="M 520 590 L 150 590 L 150 360 L 240 360" class="arrow" />
+
+  <!-- No branch (END) -->
+  <line x1="400" y1="510" x2="400" y2="760" class="arrow" />
+  <text x="430" y="580" class="text-small">No (END)</text>
+
+  <!-- Extract Result -->
+  <rect x="250" y="760" width="300" height="40" class="activity" />
+  <text x="400" y="785" class="text">Extract Final AI Message</text>
+  <line x1="400" y1="800" x2="400" y2="840" class="arrow" />
+
+  <!-- Save AI Msg -->
+  <rect x="250" y="840" width="300" height="40" class="activity" />
+  <text x="400" y="865" class="text">Save AI Assistant Msg to Database</text>
+  <line x1="400" y1="880" x2="400" y2="920" class="arrow" />
+
+  <!-- Return UI -->
+  <rect x="250" y="920" width="300" height="40" class="activity" />
+  <text x="400" y="945" class="text">Return JSON Response to Frontend</text>
+  <line x1="400" y1="960" x2="400" y2="1000" class="arrow" />
+
+  <!-- End -->
+  <circle cx="400" cy="1015" r="15" fill="none" stroke="#333" stroke-width="2" />
+  <circle cx="400" cy="1015" r="8" fill="#333" />
+
+</svg>

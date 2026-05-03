@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="350" style="background-color: white; font-family: monospace; font-size: 16px;">
+  <defs>
+    <style>
+      .folder { fill: #d4a373; font-weight: bold; }
+      .line { stroke: #a3a3a3; stroke-width: 1.5; stroke-dasharray: 4; }
+    </style>
+  </defs>
+
+  <text x="20" y="40" class="folder">📁 dataset/</text>
+  
+  <line class="line" x1="30" y1="50" x2="30" y2="280" />
+
+  <!-- Corolla -->
+  <line class="line" x1="30" y1="80" x2="60" y2="80" />
+  <text x="65" y="85" class="folder">📁 corolla/</text>
+  
+  <line class="line" x1="75" y1="95" x2="75" y2="120" />
+  <line class="line" x1="75" y1="100" x2="105" y2="100" />
+  <text x="110" y="105" class="folder">📁 train/</text>
+  <line class="line" x1="75" y1="120" x2="105" y2="120" />
+  <text x="110" y="125" class="folder">📁 test/</text>
+
+  <!-- Yaris -->
+  <line class="line" x1="30" y1="160" x2="60" y2="160" />
+  <text x="65" y="165" class="folder">📁 yaris/</text>
+
+  <line class="line" x1="75" y1="175" x2="75" y2="200" />
+  <line class="line" x1="75" y1="180" x2="105" y2="180" />
+  <text x="110" y="185" class="folder">📁 train/</text>
+  <line class="line" x1="75" y1="200" x2="105" y2="200" />
+  <text x="110" y="205" class="folder">📁 test/</text>
+
+  <!-- Other -->
+  <line class="line" x1="30" y1="240" x2="60" y2="240" />
+  <text x="65" y="245" class="folder">📁 other/</text>
+
+  <line class="line" x1="75" y1="255" x2="75" y2="280" />
+  <line class="line" x1="75" y1="260" x2="105" y2="260" />
+  <text x="110" y="265" class="folder">📁 train/</text>
+  <line class="line" x1="75" y1="280" x2="105" y2="280" />
+  <text x="110" y="285" class="folder">📁 test/</text>
+</svg>

@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" style="background-color: white; font-family: sans-serif; font-size: 13px;">
+  <defs>
+    <style>
+      .lifeline-box { fill: #e3f2fd; stroke: #1976d2; stroke-width: 2; rx: 5; ry: 5; }
+      .lifeline-line { stroke: #999; stroke-width: 2; stroke-dasharray: 5,5; }
+      .arrow { stroke: #333; stroke-width: 2; marker-end: url(#arrowhead); }
+      .arrow-dashed { stroke: #333; stroke-width: 2; stroke-dasharray: 4,4; marker-end: url(#arrowhead); }
+      .text-box { fill: #333; font-weight: bold; text-anchor: middle; }
+      .text-msg { fill: #333; text-anchor: middle; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+
+  <!-- Lifelines -->
+  <!-- Admin -->
+  <rect x="50" y="20" width="100" height="40" class="lifeline-box" />
+  <text x="100" y="45" class="text-box">Admin</text>
+  <line x1="100" y1="60" x2="100" y2="720" class="lifeline-line" />
+
+  <!-- Dashboard -->
+  <rect x="250" y="20" width="100" height="40" class="lifeline-box" />
+  <text x="300" y="45" class="text-box">Dashboard</text>
+  <line x1="300" y1="60" x2="300" y2="720" class="lifeline-line" />
+
+  <!-- Backend -->
+  <rect x="450" y="20" width="100" height="40" class="lifeline-box" />
+  <text x="500" y="45" class="text-box">Backend</text>
+  <line x1="500" y1="60" x2="500" y2="720" class="lifeline-line" />
+
+  <!-- Database -->
+  <rect x="650" y="20" width="100" height="40" class="lifeline-box" />
+  <text x="700" y="45" class="text-box">Database</text>
+  <line x1="700" y1="60" x2="700" y2="720" class="lifeline-line" />
+
+  <!-- Agent -->
+  <rect x="850" y="20" width="100" height="40" class="lifeline-box" />
+  <text x="900" y="45" class="text-box">AI Agent</text>
+  <line x1="900" y1="60" x2="900" y2="720" class="lifeline-line" />
+
+  <!-- File Structure -->
+  <rect x="1040" y="20" width="120" height="40" class="lifeline-box" />
+  <text x="1100" y="45" class="text-box">File Structure</text>
+  <line x1="1100" y1="60" x2="1100" y2="720" class="lifeline-line" />
+
+  <!-- Messages -->
+  
+  <!-- Y=100 -->
+  <line x1="100" y1="100" x2="295" y2="100" class="arrow" />
+  <text x="200" y="95" class="text-msg">Open Dashboard</text>
+
+  <!-- Y=135 -->
+  <line x1="300" y1="135" x2="495" y2="135" class="arrow" />
+  <text x="400" y="130" class="text-msg">GET /daily-stats, /dataset-stats</text>
+
+  <!-- Y=170 -->
+  <line x1="500" y1="170" x2="695" y2="170" class="arrow" />
+  <text x="600" y="165" class="text-msg">Query InferenceResult</text>
+
+  <!-- Y=205 -->
+  <line x1="700" y1="205" x2="505" y2="205" class="arrow-dashed" />
+  <text x="600" y="200" class="text-msg">Return Rows (OK/NG)</text>
+
+  <!-- Y=240 -->
+  <line x1="500" y1="240" x2="1095" y2="240" class="arrow" />
+  <text x="800" y="235" class="text-msg">List directories &amp; count images in /dataset</text>
+
+  <!-- Y=275 -->
+  <line x1="1100" y1="275" x2="505" y2="275" class="arrow-dashed" />
+  <text x="800" y="270" class="text-msg">Return Physical Image Counts</text>
+
+  <!-- Y=310 -->
+  <line x1="500" y1="310" x2="305" y2="310" class="arrow-dashed" />
+  <text x="400" y="305" class="text-msg">Return Combined Stats</text>
+
+  <!-- Y=345 -->
+  <line x1="300" y1="345" x2="105" y2="345" class="arrow-dashed" />
+  <text x="200" y="340" class="text-msg">Render Dashboard UI</text>
+
+
+  <!-- Chat Interaction Section -->
+  <line x1="50" y1="380" x2="1150" y2="380" style="stroke: #ddd; stroke-width: 1; stroke-dasharray: 2,2;" />
+  <rect x="50" y="390" width="110" height="20" style="fill: #f0f0f0; stroke: #ccc;" />
+  <text x="105" y="404" style="font-size: 11px; fill: #555; text-anchor: middle;">AI Supervisor Chat</text>
+
+  <!-- Y=435 -->
+  <line x1="100" y1="435" x2="295" y2="435" class="arrow" />
+  <text x="200" y="430" class="text-msg">Type Prompt (Status)</text>
+
+  <!-- Y=470 -->
+  <line x1="300" y1="470" x2="495" y2="470" class="arrow" />
+  <text x="400" y="465" class="text-msg">POST /admin/model-status</text>
+
+  <!-- Y=505 -->
+  <line x1="500" y1="505" x2="895" y2="505" class="arrow" />
+  <text x="700" y="500" class="text-msg">Forward Prompt &amp; History</text>
+
+  <!-- Y=540 -->
+  <line x1="900" y1="540" x2="705" y2="540" class="arrow" />
+  <text x="800" y="535" class="text-msg">Fetch SystemObservations</text>
+
+  <!-- Y=575 -->
+  <line x1="700" y1="575" x2="895" y2="575" class="arrow-dashed" />
+  <text x="800" y="570" class="text-msg">Return Observations</text>
+
+  <!-- Y=610 -->
+  <line x1="900" y1="610" x2="505" y2="610" class="arrow-dashed" />
+  <text x="700" y="605" class="text-msg">Return AI Analysis</text>
+
+  <!-- Y=645 -->
+  <line x1="500" y1="645" x2="695" y2="645" class="arrow" />
+  <text x="600" y="640" class="text-msg">Save ChatMessage</text>
+
+  <!-- Y=680 -->
+  <line x1="500" y1="680" x2="305" y2="680" class="arrow-dashed" />
+  <text x="400" y="675" class="text-msg">Return Chat Response</text>
+
+  <!-- Y=715 -->
+  <line x1="300" y1="715" x2="105" y2="715" class="arrow-dashed" />
+  <text x="200" y="710" class="text-msg">Display Chat Output</text>
+
+</svg>

@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="950" style="background-color: white; font-family: sans-serif; font-size: 14px;">
+  <defs>
+    <style>
+      .activity { fill: #e3f2fd; stroke: #1976d2; stroke-width: 2; rx: 10; ry: 10; }
+      .bg-activity { fill: #fff3e0; stroke: #f57c00; stroke-width: 2; rx: 10; ry: 10; }
+      .arrow { stroke: #333; stroke-width: 2; marker-end: url(#arrowhead); }
+      .text { fill: #333; text-anchor: middle; font-weight: bold; }
+      .bar { fill: #333; }
+      .node-start { fill: #333; }
+      .node-end-outer { fill: none; stroke: #333; stroke-width: 2; }
+      .node-end-inner { fill: #333; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+
+  <!-- Start Node -->
+  <circle cx="400" cy="40" r="15" class="node-start" />
+  <line x1="400" y1="55" x2="400" y2="80" class="arrow" />
+
+  <!-- Login -->
+  <rect x="300" y="80" width="200" height="40" class="activity" />
+  <text x="400" y="105" class="text">Team Member Login</text>
+  <line x1="400" y1="120" x2="400" y2="150" class="arrow" />
+
+  <!-- Scan Model -->
+  <rect x="270" y="150" width="260" height="40" class="activity" />
+  <text x="400" y="175" class="text">Scan Barcode / Select Model</text>
+  <line x1="400" y1="190" x2="400" y2="220" class="arrow" />
+
+  <!-- Capture -->
+  <rect x="300" y="220" width="200" height="40" class="activity" />
+  <text x="400" y="245" class="text">Capture 4 Images</text>
+  <line x1="400" y1="260" x2="400" y2="290" class="arrow" />
+
+  <!-- Submit -->
+  <rect x="270" y="290" width="260" height="40" class="activity" />
+  <text x="400" y="315" class="text">Submit to Backend (/process)</text>
+  <line x1="400" y1="330" x2="400" y2="360" class="arrow" />
+
+  <!-- Read -->
+  <rect x="270" y="360" width="260" height="40" class="activity" />
+  <text x="400" y="385" class="text">Read Images Concurrently</text>
+  <line x1="400" y1="400" x2="400" y2="430" class="arrow" />
+
+  <!-- YOLO Inference -->
+  <rect x="270" y="430" width="260" height="40" class="activity" />
+  <text x="400" y="455" class="text">Threaded YOLO Inference</text>
+  <line x1="400" y1="470" x2="400" y2="500" class="arrow" />
+
+  <!-- Fork 1 -->
+  <rect x="150" y="500" width="500" height="10" class="bar" />
+  <line x1="250" y1="510" x2="250" y2="540" class="arrow" />
+  <line x1="550" y1="510" x2="550" y2="540" class="arrow" />
+
+  <!-- Render / Detect -->
+  <rect x="160" y="540" width="180" height="40" class="activity" />
+  <text x="250" y="565" class="text">Render JPEGs</text>
+
+  <rect x="430" y="540" width="240" height="40" class="activity" />
+  <text x="550" y="565" class="text">Detect Defects (ok/notgood)</text>
+
+  <!-- Join 1 -->
+  <line x1="250" y1="580" x2="250" y2="610" class="arrow" />
+  <line x1="550" y1="580" x2="550" y2="610" class="arrow" />
+  <rect x="150" y="610" width="500" height="10" class="bar" />
+  <line x1="400" y1="620" x2="400" y2="650" class="arrow" />
+
+  <!-- Package ZIP -->
+  <rect x="280" y="650" width="240" height="40" class="activity" />
+  <text x="400" y="675" class="text">Package Results into ZIP</text>
+  <line x1="400" y1="690" x2="400" y2="720" class="arrow" />
+
+  <!-- Fork 2 (Sync Response / Async Task) -->
+  <rect x="150" y="720" width="500" height="10" class="bar" />
+  
+  <line x1="250" y1="730" x2="250" y2="760" class="arrow" />
+  <line x1="550" y1="730" x2="550" y2="760" class="arrow" />
+
+  <!-- Return / Background -->
+  <rect x="130" y="760" width="240" height="40" class="activity" />
+  <text x="250" y="785" class="text">Return ZIP Response to UI</text>
+  
+  <rect x="430" y="760" width="240" height="40" class="bg-activity" />
+  <text x="550" y="785" class="text">Background: Record Task</text>
+
+  <!-- Display / DB Save -->
+  <line x1="250" y1="800" x2="250" y2="830" class="arrow" />
+  <line x1="550" y1="800" x2="550" y2="830" class="arrow" />
+
+  <rect x="130" y="830" width="240" height="40" class="activity" />
+  <text x="250" y="855" class="text">Display Results on UI</text>
+  
+  <rect x="430" y="830" width="240" height="40" class="bg-activity" />
+  <text x="550" y="855" class="text">Save Images to Disk &amp; DB</text>
+
+  <!-- End nodes -->
+  <line x1="250" y1="870" x2="250" y2="900" class="arrow" />
+  <line x1="550" y1="870" x2="550" y2="900" class="arrow" />
+
+  <!-- UI End -->
+  <circle cx="250" cy="915" r="15" class="node-end-outer" />
+  <circle cx="250" cy="915" r="10" class="node-end-inner" />
+
+  <!-- Backend End -->
+  <circle cx="550" cy="915" r="15" class="node-end-outer" />
+  <circle cx="550" cy="915" r="10" class="node-end-inner" />
+
+</svg>

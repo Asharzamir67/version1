@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: fyp_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pass123
+      POSTGRES_DB: fyp_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./fastapi-backend
+    container_name: fyp_backend
+    env_file:
+      - ./fastapi-backend/.docker.env
+    volumes:
+      - ./fastapi-backend/ai_model:/app/ai_model:ro
+      - ./fastapi-backend/saved_images:/app/saved_images
+      - ./fastapi-backend/dataset:/app/dataset
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+
+volumes:
+  postgres_data:
