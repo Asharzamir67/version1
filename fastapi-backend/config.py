@@ -20,6 +20,10 @@ DEFAULT_MODEL_FILENAME = "yoloseg_bestwithoutNG.pt"
 STATUS_OK = "ok"
 STATUS_NG = "notgood"
 
+# Defect detection thresholds
+CONF_THRESH = 0.50
+COVERAGE_THRESHOLD_OK = 0.05
+
 # Car model mapping prefixes to directory names
 CAR_PREFIX_MAP = {
     "zre": "corolla",

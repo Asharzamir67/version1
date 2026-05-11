@@ -2,14 +2,21 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 import os
 from datetime import datetime, date as dt_date
+from langchain_core.tools import tool
+from langchain_core.runnables import RunnableConfig
 from models.inference_result import InferenceResult
 from models.model_registry import ModelVersion
 from services.evaluator_service import evaluate_model_performance
 from services.training_service import start_retraining_background, get_training_status
 from config import SAVED_IMAGES_DIR, DATASET_DIR
 
-def get_system_stats(db: Session):
-    """Query the database and filesystem to get total records and image counts. Requires a db session."""
+@tool
+def get_system_stats(config: RunnableConfig):
+    """
+    Query the database and filesystem to get total records and image counts.
+    Use this for a high-level overview of system scale.
+    """
+    db: Session = config.get("configurable", {}).get("db")
     try:
         db_count = db.query(func.count(InferenceResult.id)).scalar()
         total_images = 0
@@ -24,8 +31,13 @@ def get_system_stats(db: Session):
     except Exception as e:
         return f"Error fetching stats: {str(e)}"
 
-def get_active_model_info(db: Session):
-    """Get information about the AI model currently 'Active' in production."""
+@tool
+def get_active_model_info(config: RunnableConfig):
+    """
+    Get details about the AI model currently running in production.
+    Returns version, performance metrics (mAP), and deployment date.
+    """
+    db: Session = config.get("configurable", {}).get("db")
     try:
         active = db.query(ModelVersion).filter(ModelVersion.is_active == True).first()
         if active:
@@ -37,13 +49,14 @@ def get_active_model_info(db: Session):
     except Exception as e:
         return f"Error fetching active model info: {str(e)}"
 
-def get_car_model_stats(db: Session, model_name: str, only_today: bool = False):
+@tool
+def get_car_model_stats(model_name: str, config: RunnableConfig, only_today: bool = False):
     """
     Count how many cars of a specific model type were processed.
-    Args:
-        model_name: The name or part of the name of the car model (e.g., 'Toyota', 'Corolla').
-        only_today: If True, only count cars processed today.
+    model_name: The name of the car model (e.g., 'Toyota').
+    only_today: If True, only count cars processed in the last 24 hours.
     """
+    db: Session = config.get("configurable", {}).get("db")
     try:
         query = db.query(func.count(InferenceResult.id)).filter(
             InferenceResult.car_model.ilike(f"%{model_name}%")
@@ -58,8 +71,13 @@ def get_car_model_stats(db: Session, model_name: str, only_today: bool = False):
     except Exception as e:
         return f"Error fetching car model stats: {str(e)}"
 
-def get_retraining_dataset_stats(db: Session):
-    """Get the current state of the model retraining dataset (train vs test counts organized by car model)."""
+@tool
+def get_retraining_dataset_stats(config: RunnableConfig):
+    """
+    Check the volume of images available for retraining, categorized by car model.
+    Use this before recommending or starting a retraining task.
+    """
+    db: Session = config.get("configurable", {}).get("db")
     try:
         # DB Stats
         test_count = db.query(func.count(InferenceResult.id)).filter(InferenceResult.is_test_set == True).scalar()
@@ -84,8 +102,12 @@ def get_retraining_dataset_stats(db: Session):
     except Exception as e:
         return f"Error fetching dataset stats: {str(e)}"
 
-def get_quality_analytics(db: Session):
-    """Calculate the overall OK/NG classification rate based on image statuses."""
+@tool
+def get_quality_analytics(config: RunnableConfig):
+    """
+    Calculate the overall OK/NG classification rate for the entire system.
+    """
+    db: Session = config.get("configurable", {}).get("db")
     try:
         results = db.query(
             InferenceResult.image1_status,
@@ -110,11 +132,13 @@ def get_quality_analytics(db: Session):
     except Exception as e:
         return f"Error calculating quality stats: {str(e)}"
 
-def analyze_ng_patterns(db: Session, car_model: str = None):
+@tool
+def analyze_ng_patterns(config: RunnableConfig, car_model: str = None):
     """
-    Advanced Root Cause Analysis: Identifies which camera (Image 1-4) is producing the most NG results.
-    Can be filtered by car_model.
+    Root Cause Analysis: Identifies which camera position is producing the most failures.
+    car_model: Optional filter to focus on a specific car type.
     """
+    db: Session = config.get("configurable", {}).get("db")
     try:
         query = db.query(
             InferenceResult.image1_status,
@@ -154,8 +178,13 @@ def analyze_ng_patterns(db: Session, car_model: str = None):
     except Exception as e:
         return f"Error analyzing patterns: {str(e)}"
 
-def get_model_registry_history(db: Session):
-    """List all trained model versions, their performance metrics, and deployment status."""
+@tool
+def get_model_registry_history(config: RunnableConfig):
+    """
+    List all trained model versions, performance metrics, and deployment status.
+    Use this to compare current performance with historical benchmarks.
+    """
+    db: Session = config.get("configurable", {}).get("db")
     try:
         versions = db.query(ModelVersion).order_by(ModelVersion.version_number.desc()).all()
         if not versions:
@@ -170,29 +199,31 @@ def get_model_registry_history(db: Session):
     except Exception as e:
         return f"Error fetching registry history: {str(e)}"
 
+@tool
 def start_model_retraining(car_model_query: str):
     """
     Initiate a background training task to create a new model version.
-    Args:
-        car_model_query: Car model to train on (e.g., 'Corolla' or 'all').
+    Only call this if quality analytics show decline and dataset stats show sufficient new images.
     """
     try:
         # Check training status first
         current = get_training_status()
-        if "Training" in current:
-            return f"Cannot start retraining. System status: {current}"
+        if current and ("Training" in str(current) or "In Progress" in str(current)):
+            return f"WARNING: Retraining skipped. A training session is already active: {current}"
             
         success, msg = start_retraining_background(car_model_query)
         return msg
     except Exception as e:
         return f"Error triggering retraining: {str(e)}"
 
-def log_system_observation(db: Session, severity: str, category: str, observation: str):
+@tool
+def log_system_observation(severity: str, category: str, observation: str, config: RunnableConfig):
     """
-    Log a persistent observation about the system. 
-    Severities: INFO, WARNING, CRITICAL. 
-    Categories: MODEL_DRIFT, HARDWARE, DATASET.
+    Log a persistent observation about system health (INFO, WARNING, or CRITICAL).
+    category: MODEL_DRIFT, HARDWARE, or DATASET.
+    observation: Detailed description of the finding.
     """
+    db: Session = config.get("configurable", {}).get("db")
     try:
         from models.model_registry import SystemObservation
         from services.notifications import notification_service
@@ -209,12 +240,16 @@ def log_system_observation(db: Session, severity: str, category: str, observatio
         if severity.upper() == "CRITICAL":
             notification_service.send_critical_alert(severity, category, observation)
             
-        return f"Observation logged and alert sent: [{severity}] {observation}" if severity.upper() == "CRITICAL" else f"Observation logged: [{severity}] {observation}"
+        return f"Observation logged: [{severity}] {observation}"
     except Exception as e:
         return f"Error logging observation: {str(e)}"
 
-def get_past_observations(db: Session, limit: int = 5):
-    """Retrieve the last few system observations to understand historical context."""
+@tool
+def get_past_observations(config: RunnableConfig, limit: int = 5):
+    """
+    Retrieve recent system observations logged by the AI or humans.
+    """
+    db: Session = config.get("configurable", {}).get("db")
     try:
         from models.model_registry import SystemObservation
         obs = db.query(SystemObservation).order_by(SystemObservation.created_at.desc()).limit(limit).all()
@@ -225,11 +260,13 @@ def get_past_observations(db: Session, limit: int = 5):
     except Exception as e:
         return f"Error fetching observations: {str(e)}"
 
-def audit_system_quality(db: Session):
+@tool
+def audit_system_quality(config: RunnableConfig):
     """
-    Performs a time-series audit to find sudden spikes in NG (No-Good) results.
-    Compares the last hour to the last 24 hours.
+    Performs a time-series audit to find sudden spikes in NG results.
+    Use this as the FIRST diagnostic step for health checks.
     """
+    db: Session = config.get("configurable", {}).get("db")
     try:
         from datetime import datetime, timedelta
         now = datetime.now()
@@ -256,15 +293,19 @@ def audit_system_quality(db: Session):
         recent_rate, recent_count = get_ng_rate(one_hour_ago)
         daily_rate, daily_count = get_ng_rate(one_day_ago)
 
+        if recent_count < 20:
+            return (f"Quality Audit Result: Sample size in the last hour is too low ({recent_count} cars) for a definitive trend analysis. "
+                    f"Overall 24h NG rate is {daily_rate:.1f}%.")
+
         report = [
             f"Quality Audit Report ({now.strftime('%H:%M')}):",
             f"- Last Hour NG Rate: {recent_rate:.1f}% ({recent_count} cars)",
             f"- Last 24h NG Rate: {daily_rate:.1f}% ({daily_count} cars)"
         ]
 
-        if recent_rate > daily_rate * 1.5 and recent_count > 5:
-            report.append("\nANOMALY DETECTED: The NG rate has spiked significantly in the last hour compared to the daily average.")
-        elif recent_rate < daily_rate * 0.5 and recent_count > 5:
+        if recent_rate > daily_rate * 1.5:
+            report.append("\nANOMALY DETECTED: Significant NG rate spike in the last hour. Immediate investigation recommended.")
+        elif recent_rate < daily_rate * 0.5:
             report.append("\nINSIGHT: Quality has significantly improved in the last hour.")
         else:
             report.append("\nStatus: Quality trends are stable.")
@@ -273,9 +314,11 @@ def audit_system_quality(db: Session):
     except Exception as e:
         return f"Error auditing quality: {str(e)}"
 
+@tool
 def get_system_error_logs(lines: int = 20):
     """
-    Read the latest entries from alerts.log and kernel.errors.txt to diagnose system failures.
+    Read latest entries from system logs (alerts.log, kernel.errors.txt).
+    Call this if audit_system_quality reveals anomalies.
     """
     try:
         files = ["alerts.log", "kernel.errors.txt"]

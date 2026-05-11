@@ -126,22 +126,33 @@ from database import SessionLocal
 async def autonomous_supervisor_loop():
     """
     Background loop that triggers the agent to check for system drift/anomalies every hour.
+    Includes a circuit breaker to stop the loop after 3 consecutive failures.
     """
+    consecutive_failures = 0
+    MAX_FAILURES = 3
+    
     while True:
         await asyncio.sleep(3600) # Check every hour
         print("--- [AUTONOMOUS SUPERVISOR] Periodic Health Check Starting ---")
+        
         db = SessionLocal()
         try:
             prompt = (
-                "AUTONOMOUS TASK: Perform a system health check. "
-                "1. Analyze recent quality metrics. "
-                "2. Perform RCA if NG rate is high. "
-                "3. Check for model drift. "
-                "4. Log any findings as a 'System Observation'."
+                "AUTONOMOUS SUPERVISOR CHECKLIST:\n"
+                "1. [AUDIT] Call audit_system_quality() to check for recent NG spikes.\n"
+                "2. [DIAGNOSE] If anomalies found, call get_system_error_logs().\n"
+                "3. [ANALYZE] Call analyze_ng_patterns() to identify hardware/model drift.\n"
+                "4. [RECORD] Call log_system_observation() to persist your final summary.\n"
+                "Focus on the last hour of production data."
             )
-            get_current_model_status(db, prompt=prompt, thread_id="autonomous_monitor")
+            get_current_model_status(db, prompt=prompt, thread_id="autonomous_monitor", use_background_model=True)
+            consecutive_failures = 0 # Reset on success
         except Exception as e:
-            print(f"--- [AUTONOMOUS SUPERVISOR] Error: {str(e)} ---")
+            consecutive_failures += 1
+            print(f"--- [AUTONOMOUS SUPERVISOR] Error (Attempt {consecutive_failures}/{MAX_FAILURES}): {str(e)} ---")
+            if consecutive_failures >= MAX_FAILURES:
+                print("--- [AUTONOMOUS SUPERVISOR] Circuit Breaker Triggered. Disabling background loop. ---")
+                break
         finally:
             db.close()
 
