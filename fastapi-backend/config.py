@@ -14,14 +14,14 @@ DATASET_DIR = BASE_DIR / "dataset"
 AI_MODEL_DIR = BASE_DIR / "ai_model"
 
 # Default model filename if none is specified or found in database
-DEFAULT_MODEL_FILENAME = "yoloseg_bestwithoutNG.pt"
+DEFAULT_MODEL_FILENAME = "best (2).pt"
 
 # Standardized status strings for analysis results
 STATUS_OK = "ok"
 STATUS_NG = "notgood"
 
 # Defect detection thresholds
-CONF_THRESH = 0.50
+CONF_THRESH = 0.35
 COVERAGE_THRESHOLD_OK = 0.05
 
 # Car model mapping prefixes to directory names
