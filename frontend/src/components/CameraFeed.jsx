@@ -30,7 +30,7 @@ const CameraFeed = forwardRef(function CameraFeed({ name, cameraId, status, stre
 
     const setupVideo = () => {
       if (!videoRef.current) {
-        setTimeout(setupVideo, 100)
+        timeoutId = setTimeout(setupVideo, 100)
         return
       }
 
@@ -73,6 +73,7 @@ const CameraFeed = forwardRef(function CameraFeed({ name, cameraId, status, stre
         video.removeEventListener('loadedmetadata', handleLoadedMetadata)
         video.removeEventListener('playing', handlePlaying)
         video.removeEventListener('error', handleError)
+        video.srcObject = null
       }
     }
 
@@ -90,6 +91,7 @@ const CameraFeed = forwardRef(function CameraFeed({ name, cameraId, status, stre
       if (videoRef.current && videoRef.current.srcObject) {
         const tracks = videoRef.current.srcObject.getTracks()
         tracks.forEach(track => track.stop())
+        videoRef.current.srcObject = null
       }
     }
   }, [])

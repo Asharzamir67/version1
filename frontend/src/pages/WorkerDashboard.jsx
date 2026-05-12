@@ -298,6 +298,14 @@ function WorkerDashboard({ user, onLogout }) {
     setCaptureModalOpen(true)
   }
 
+  const stopAllStreams = () => {
+    Object.values(streamsRef.current).forEach(stream => {
+      if (stream) stream.getTracks().forEach(track => track.stop())
+    })
+    streamsRef.current = {}
+    setCameraStreams({ frontend1: null, frontend2: null, backend1: null, backend2: null })
+  }
+
   // Core Inference Logic
   const executeInference = async (files, model, metadata) => {
     if (files.length !== 4) {
@@ -354,11 +362,10 @@ function WorkerDashboard({ user, onLogout }) {
       }
 
       setProcessingModalOpen(false);
-      setTimeout(() => {
-        navigate('/processing-results', {
-          state: { result: finalResult }
-        });
-      }, 100);
+      stopAllStreams();
+      navigate('/processing-results', {
+        state: { result: finalResult }
+      });
     } catch (err) {
       const errorMessage = err.response?.data?.detail || err.message || 'Processing failed'
       alert('Processing error: ' + errorMessage)

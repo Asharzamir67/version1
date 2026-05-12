@@ -52,8 +52,10 @@ const AdminDashboard = ({ user, onLogout }) => {
     
     let ws;
     let reconnectTimer;
+    let unmounted = false;
 
     const connect = () => {
+      if (unmounted) return;
       console.log("--- [DASHBOARD] Connecting to WebSocket ---");
       ws = new WebSocket(wsUrl);
 
@@ -68,6 +70,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       };
 
       ws.onclose = () => {
+        if (unmounted) return;
         console.log("--- [DASHBOARD] WebSocket Disconnected. Reconnecting... ---");
         reconnectTimer = setTimeout(connect, 5000);
       };
@@ -81,8 +84,9 @@ const AdminDashboard = ({ user, onLogout }) => {
     connect();
 
     return () => {
-      if (ws) ws.close();
+      unmounted = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) ws.close();
     };
   }, [user]);
 
